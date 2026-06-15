@@ -1,4 +1,4 @@
-# Craft Clone
+# Craft
 
 A Craft.do-inspired block-based document editor being extended with
 Notion-style databases. Users create hierarchical documents composed of typed
