@@ -41,6 +41,9 @@ Full Leave Tracker: manager dashboard (all employees, leave balances, overtime,
 archive) and intern personal view. Daily Updates and Monthly Reports with
 role-based dual-mode rendering. AI assistant panel (mock streaming/SSE).
 Settings modal with dark/light theme and accent colour. Promo popup.
+Employee Profiles (manager-only): two-panel view with identity, leave,
+contact, notes, and a deferred documents tab; add/edit/deactivate/reactivate
+employees; shares `leave_employees` localStorage key with Leave Tracker.
 
 **Phase 3 (planning):** Database schema foundation. No application code written
 yet. See [`docs/DATABASES.md`](docs/DATABASES.md) for the data model design and

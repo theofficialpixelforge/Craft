@@ -13,7 +13,7 @@ import { ImagineView } from '../views/ImagineView';
 import { EmployeeLeaveView } from '../views/EmployeeLeaveView';
 import { DailyUpdatesView } from '../views/DailyUpdatesView';
 import { MonthlyReportsView } from '../views/MonthlyReportsView';
-import { SharedView } from '../views/SharedView';
+import { EmployeeProfilesView } from '../views/EmployeeProfilesView';
 import { UnsortedView } from '../views/UnsortedView';
 import { FolderView } from '../views/FolderView';
 import { AssistantPanel } from '../views/AssistantPanel';
@@ -29,7 +29,7 @@ import type { Document } from '../../types';
 
 const ONBOARDING_KEY = 'craft_onboarding_done';
 
-type NavView = 'all-docs' | 'unsorted' | 'tasks' | 'calendar' | 'imagine' | 'updates' | 'reports' | 'shared' | { type: 'folder'; id: string };
+type NavView = 'all-docs' | 'unsorted' | 'tasks' | 'calendar' | 'imagine' | 'updates' | 'reports' | 'profiles' | { type: 'folder'; id: string };
 
 type Role = 'manager' | 'intern';
 interface Props { userName?: string; role?: Role; employeeId?: string; onSignOut?: () => void; }
@@ -264,7 +264,7 @@ export function AppLayout({ userName, role = 'manager', employeeId, onSignOut }:
               <NavItem icon={<Activity size={15}/>}     label="Daily Updates"   active={nav==='updates'}  onClick={() => setNavAndClearDoc('updates')}/>
               <NavItem icon={<FileText size={15}/>}     label="Monthly Reports" active={nav==='reports'}  onClick={() => setNavAndClearDoc('reports')}/>
               <div style={{ margin:'6px 0' }}/>
-              <NavItem icon={<Users size={15}/>} label="Shared with Me" active={nav==='shared'} onClick={() => setNavAndClearDoc('shared')}/>
+              {!isIntern && <NavItem icon={<Users size={15}/>} label="Employee Profiles" active={nav==='profiles'} onClick={() => setNavAndClearDoc('profiles')}/>}
               <div style={{ margin:'8px 0' }}/>
 
               {/* Starred */}
@@ -337,8 +337,8 @@ export function AppLayout({ userName, role = 'manager', employeeId, onSignOut }:
               isIntern && employeeId
                 ? <MonthlyReportsView mode="employee" employeeId={employeeId}/>
                 : <MonthlyReportsView mode="manager"/>
-            ) : nav === 'shared' ? (
-              <SharedView/>
+            ) : nav === 'profiles' ? (
+              <EmployeeProfilesView/>
             ) : nav === 'unsorted' ? (
               <UnsortedView docs={unsortedDocs} onSelectDoc={handleSelectDoc} onNewDoc={() => handleNewDoc()}/>
             ) : typeof nav === 'object' && nav.type === 'folder' ? (

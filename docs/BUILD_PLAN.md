@@ -69,6 +69,17 @@ any document as Markdown; sign out and sign back in.
 - [x] Role-based routing: Manager gets full Leave Tracker + all views; Intern
       sees personal leave + own updates/reports only; role and employeeId
       persisted in `craft_auth` localStorage key
+- [x] **Employee Profiles** (`EmployeeProfilesView`): manager-only two-panel
+      view replacing "Shared with Me". Left panel: searchable employee list with
+      avatar initials, status badges, and quick status indicators. Right panel:
+      tabbed profile detail — Overview (identity, tenure), Leave (live accrual
+      cards + history table), Contact (phone, address, emergency contact), Notes
+      (manager-only text, auto-saved on blur), Documents (deferred notice). Add /
+      Edit modal with name, email, job title, department, start date, employment
+      type (intern/full-time/contractor), app role, phone, address, emergency
+      contact. Deactivate / reactivate / delete actions via "More" menu.
+      Extends `leave_employees` localStorage key with new optional fields —
+      backward-compatible with Leave Tracker and EmployeeLeaveView.
 - [ ] **Employee Documents** — per-employee file uploads from the profile page
       are **explicitly deferred**. See the "Employee Documents" entry in the
       Deferred section below for the gating conditions and compliance
