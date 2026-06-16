@@ -10,7 +10,8 @@ Each phase is independently shippable. Each has a task checklist and a
 **Goal:** A working document editor with persistent storage.
 
 - [x] Block types: text, h1, h2, h3, bullet, numbered, todo, code, quote,
-      divider, callout, image, page
+      divider, callout, image, page, table (rows × cols, optional header row),
+      columns2 (two side-by-side text columns), columns3 (three columns)
 - [x] `InlineNode` AST for inline formatting (bold, italic, underline, strike,
       code, link)
 - [x] Document tree: CRUD, nesting, drag-to-reorder, favorites, emoji, cover
@@ -23,7 +24,8 @@ Each phase is independently shippable. Each has a task checklist and a
 - [x] Backlinks: documents that link to the current page
 - [x] Markdown export (per document, including all block types)
 - [x] sql.js backend with debounced file persistence
-- [x] Local auth (sign-in → name → app; localStorage only)
+- [x] Local auth (sign-in → name → role → app; localStorage only;
+      roles: Manager and Intern only)
 
 **Done when:** A user can create, edit, navigate, and search documents; export
 any document as Markdown; sign out and sign back in.
@@ -51,9 +53,27 @@ any document as Markdown; sign out and sign back in.
 - [x] My Space dropdown in sidebar (Settings, Sign Out)
 - [x] Sign-out clears auth and returns to sign-in screen
 - [x] Calendar ⋯ menu: Daily Notes / Tasks visibility toggles
+- [x] **Leave Tracker** (Manager view — `ImagineView`): full dashboard showing
+      all employees' leave balances, low-balance alerts, and recent leave
+      activity; per-employee detail with month-by-month accrual table; leave
+      recording modal (annual / sick / family, days, date, reason); overtime
+      recording modal; deactivate / reactivate / remove employees; archive view
+      for deactivated staff — all persisted to localStorage
+- [x] **Leave Tracker** (Intern view — `EmployeeLeaveView`): personal
+      read-only view of accrued / used / balance for annual, sick, and family
+      leave with a month-by-month history table
+- [x] **Daily Updates** view: manager sees all employees' updates; intern sees
+      their own (`DailyUpdatesView`, `mode: 'manager' | 'employee'`)
+- [x] **Monthly Reports** view: same dual-mode pattern as Daily Updates
+      (`MonthlyReportsView`)
+- [x] Role-based routing: Manager gets full Leave Tracker + all views; Intern
+      sees personal leave + own updates/reports only; role and employeeId
+      persisted in `craft_auth` localStorage key
 
 **Done when:** A user can book calendar events, chat with the assistant, change
-their theme and accent colour, and sign out, all without a page reload.
+their theme and accent colour, and sign out, all without a page reload. A
+manager can track and record leave and overtime for all employees; an intern
+can view their own leave balance.
 
 ---
 

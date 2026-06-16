@@ -29,24 +29,32 @@ cd craft-clone && npm run dev
 | Database | sql.js — SQLite in-memory, file-persisted at `server/db/craft.db` |
 | Icons | lucide-react |
 
-## Current status — May 2026
+## Current status — June 2026
 
-**Phase 1 (done):** Core block editor, document tree, navigation, slash menu,
-format toolbar, search, backlinks, markdown export.
+**Phase 1 (done):** Core block editor with 16 block types (including table,
+2-column, and 3-column layout blocks), document tree, navigation, slash menu,
+format toolbar, search, backlinks, markdown export. Auth: sign-in → name →
+role (Manager or Intern only).
 
-**Phase 2 (done):** Calendar with month view, multi-day event booking, AI
-assistant panel (mock streaming, SSE), settings modal, dark/light theme, accent
-colour customisation, promo popup, sign-out flow.
+**Phase 2 (done):** Calendar with month/list view and multi-day event booking.
+Full Leave Tracker: manager dashboard (all employees, leave balances, overtime,
+archive) and intern personal view. Daily Updates and Monthly Reports with
+role-based dual-mode rendering. AI assistant panel (mock streaming/SSE).
+Settings modal with dark/light theme and accent colour. Promo popup.
 
 **Phase 3 (planning):** Database schema foundation. No application code written
 yet. See [`docs/DATABASES.md`](docs/DATABASES.md) for the data model design and
-open questions. See [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for all phases.
+all resolved decisions. See [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for all
+phases.
 
 **Phases 7–10 (planning):** Multi-tenancy/Postgres migration, then Notion
 import (zip-based structural import, AI categorization with mandatory review,
 and a later API/OAuth + re-sync path). No application code written yet. See
 [`docs/NOTION_IMPORT.md`](docs/NOTION_IMPORT.md) and
 [`docs/AI_PLACEMENT.md`](docs/AI_PLACEMENT.md).
+
+**Deployed:** Live on Netlify via GitHub (https://github.com/theofficialpixelforge/Craft).
+`client/_redirects` handles SPA routing.
 
 ## Key files
 
