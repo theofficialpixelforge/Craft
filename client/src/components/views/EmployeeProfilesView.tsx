@@ -217,10 +217,10 @@ function AddEditModal({ employee, onSave, onClose }: { employee?: EmployeeProfil
 
         <div style={row2}>
           {field('Full name *',
-            <><input autoFocus value={name} onChange={e=>{setName(e.target.value);setNameErr(false);}} style={inp(nameErr)} placeholder="e.g. Lebohang Noko"/>
+            <><input autoFocus value={name} onChange={e=>{setName(e.target.value);setNameErr(false);}} style={inp(nameErr)} placeholder="e.g. Jane Doe"/>
             {nameErr && <p style={{margin:'3px 0 0',fontSize:11,color:'#ef4444'}}>Name is required</p>}</>
           )}
-          {field('Email', <input value={email} onChange={e=>setEmail(e.target.value)} style={inp()} placeholder="e.g. lebo@company.com"/>)}
+          {field('Email', <input value={email} onChange={e=>setEmail(e.target.value)} style={inp()} placeholder="e.g. jane@company.com"/>)}
         </div>
         <div style={row2}>
           {field('Job title', <input value={title} onChange={e=>setTitle(e.target.value)} style={inp()} placeholder="e.g. Software Engineer"/>)}
@@ -250,7 +250,7 @@ function AddEditModal({ employee, onSave, onClose }: { employee?: EmployeeProfil
           {field('Address', <input value={addr} onChange={e=>setAddr(e.target.value)} style={inp()} placeholder="e.g. 12 Main St, Joburg"/>)}
         </div>
         <div style={row2}>
-          {field('Emergency contact name', <input value={ecName} onChange={e=>setEcName(e.target.value)} style={inp()} placeholder="e.g. Sarah Noko"/>)}
+          {field('Emergency contact name', <input value={ecName} onChange={e=>setEcName(e.target.value)} style={inp()} placeholder="e.g. John Doe"/>)}
           {field('Emergency contact phone', <input value={ecPhone} onChange={e=>setEcPhone(e.target.value)} style={inp()} placeholder="e.g. +27 83 000 0000"/>)}
         </div>
 
