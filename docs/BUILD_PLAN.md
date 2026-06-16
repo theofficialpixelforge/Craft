@@ -69,6 +69,10 @@ any document as Markdown; sign out and sign back in.
 - [x] Role-based routing: Manager gets full Leave Tracker + all views; Intern
       sees personal leave + own updates/reports only; role and employeeId
       persisted in `craft_auth` localStorage key
+- [ ] **Employee Documents** — per-employee file uploads from the profile page
+      are **explicitly deferred**. See the "Employee Documents" entry in the
+      Deferred section below for the gating conditions and compliance
+      requirements that must be met before this is built.
 
 **Done when:** A user can book calendar events, chat with the assistant, change
 their theme and accent colour, and sign out, all without a page reload. A
@@ -438,3 +442,28 @@ The following are noted but explicitly out of scope until after Phase 6 ships:
   vector store.
 - **Row-level permissions** — grant/revoke access per row; depends on
   multi-tenancy landing first.
+- **Employee Documents** — per-employee file uploads (contracts, NDAs, ID
+  copies, signed policies) accessible from the employee profile page in the
+  Leave Tracker.
+
+  **Status: explicitly deferred.** Not built in the v1 employee profile.
+
+  **Reasoning:** this feature stores heavily sensitive identifying data with
+  real compliance weight (POPIA, GDPR, and jurisdiction-dependent regulations).
+  It requires encrypted-at-rest file storage, signed download URLs, access
+  logging, and granular per-document permissions — none of which exist in the
+  current stack.
+
+  **All three of the following must be true before this is built:**
+  1. A paying client has specifically requested it.
+  2. The bulk image/file storage path from Phase 8 (Notion import) has shipped
+     — employee document storage rides on the same underlying primitives and
+     there is no point building a second, parallel storage layer before those
+     primitives exist.
+  3. Phase 7 (multi-tenancy) has shipped — per-org isolation and RLS must be
+     in place before any client documents land in the system.
+
+  **When built**, this feature requires its own planning doc covering: retention
+  policy, encryption approach, deletion rights (right to erasure under POPIA /
+  GDPR), breach response procedure, and a per-document permission model
+  (e.g. manager-only vs. HR-only vs. employee-visible).
