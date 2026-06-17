@@ -62,7 +62,7 @@ export default function App() {
   const [role,       setRole]       = useState<Role | null>(initial.role);
   const [employeeId, setEmployeeId] = useState<string | null>(initial.employeeId);
 
-  const handleSignIn = (signedInEmail: string) => {
+  const handleSignIn = (signedInEmail: string, googleProfile?: { firstName?: string; lastName?: string }) => {
     const e = signedInEmail || email;
     const saved = findAccount(e);
     if (saved) {
@@ -71,6 +71,16 @@ export default function App() {
       setFirstName(saved.firstName);
       setLastName(saved.lastName);
       localStorage.setItem('craft_auth', JSON.stringify({ email: e, firstName: saved.firstName, lastName: saved.lastName }));
+      setStep('role');
+    } else if (googleProfile?.firstName) {
+      // New user via Google — use their Google profile name, skip name page
+      const first = googleProfile.firstName;
+      const last  = googleProfile.lastName ?? '';
+      setEmail(e);
+      setFirstName(first);
+      setLastName(last);
+      localStorage.setItem('craft_auth', JSON.stringify({ email: e, firstName: first, lastName: last }));
+      upsertAccount(e, first, last);
       setStep('role');
     } else {
       localStorage.setItem('craft_auth', JSON.stringify({ email: e }));

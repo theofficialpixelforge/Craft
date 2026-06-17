@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ProviderAccountPicker, OAuthProvider } from './ProviderAccountPicker';
+import { loadGIS, requestGoogleSignIn } from '../../services/googleCalendar';
 
 interface Props {
-  onSignIn: (email: string) => void;
+  onSignIn: (email: string, googleProfile?: { firstName?: string; lastName?: string }) => void;
 }
 
 // ── SVG Logos ──────────────────────────────────────────────────────────────
@@ -58,9 +59,10 @@ function CraftLogo() {
 }
 
 export function SignInPage({ onSignIn }: Props) {
-  const [email,    setEmail]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [picker,   setPicker]   = useState<OAuthProvider | null>(null);
+  const [email,         setEmail]         = useState('');
+  const [loading,       setLoading]       = useState(false);
+  const [picker,        setPicker]        = useState<OAuthProvider | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +70,22 @@ export function SignInPage({ onSignIn }: Props) {
     setTimeout(() => { setLoading(false); onSignIn(email); }, 600);
   };
 
-  const handleOAuth = (provider: OAuthProvider) => setPicker(provider);
+  const handleOAuth = async (provider: OAuthProvider) => {
+    if (provider === 'google') {
+      setGoogleLoading(true);
+      try {
+        await loadGIS();
+        const profile = await requestGoogleSignIn();
+        onSignIn(profile.email, { firstName: profile.firstName, lastName: profile.lastName });
+      } catch {
+        // User cancelled or error — do nothing
+      } finally {
+        setGoogleLoading(false);
+      }
+    } else {
+      setPicker(provider);
+    }
+  };
 
   const handlePickerSelect = (selectedEmail: string) => {
     setPicker(null);
@@ -138,9 +155,9 @@ export function SignInPage({ onSignIn }: Props) {
 
         {/* OAuth buttons */}
         <div className="oauth-buttons">
-          <button className="oauth-btn" onClick={() => handleOAuth('google')}>
-            <GoogleLogo />
-            <span>Continue with Google</span>
+          <button className="oauth-btn" onClick={() => handleOAuth('google')} disabled={googleLoading}>
+            {googleLoading ? <span className="spinner" style={{ borderColor:'rgba(255,255,255,0.3)', borderTopColor:'white' }}/> : <GoogleLogo />}
+            <span>{googleLoading ? 'Connecting…' : 'Continue with Google'}</span>
           </button>
           <button className="oauth-btn" onClick={() => handleOAuth('apple')}>
             <AppleLogo />

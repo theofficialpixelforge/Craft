@@ -75,6 +75,29 @@ export function clearToken(): void {
 
 // ── OAuth token request (opens Google consent popup) ─────────────────────────
 
+// ── Google Sign-In (get email/profile via userinfo) ──────────────────────────
+
+export async function requestGoogleSignIn(): Promise<{ email: string; firstName?: string; lastName?: string }> {
+  const accessToken = await new Promise<string>((resolve, reject) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope:     'openid email profile',
+      callback:  (resp: any) => {
+        if (resp.error) { reject(new Error(resp.error_description ?? resp.error)); return; }
+        resolve(resp.access_token);
+      },
+    });
+    client.requestAccessToken();
+  });
+
+  const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) throw new Error('Failed to get Google profile');
+  const info = await resp.json();
+  return { email: info.email, firstName: info.given_name, lastName: info.family_name };
+}
+
 export function requestNewToken(): Promise<GCalToken> {
   return new Promise((resolve, reject) => {
     const client = window.google.accounts.oauth2.initTokenClient({
