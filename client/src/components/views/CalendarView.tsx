@@ -1,22 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus, MoreHorizontal, CheckSquare, FileText,
   ChevronLeft, ChevronRight, X, MousePointer2,
 } from 'lucide-react';
-
-// ── types ─────────────────────────────────────────────────────────────────────
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  purpose: string;
-  attendees: string[];
-  startTime: string;
-  endTime: string;
-  color: string;
-  type: 'booking' | 'busy';
-  dates: string[]; // 'YYYY-MM-DD'
-}
+import {
+  loadGIS, getStoredToken, clearToken, requestNewToken, fetchGoogleEvents,
+} from '../../services/googleCalendar';
+import type { CalendarEvent } from '../../services/googleCalendar';
 
 // ── constants & helpers ───────────────────────────────────────────────────────
 
@@ -532,9 +522,14 @@ function ListContent({ today, startDate, events }: { today: Date; startDate: Dat
                   {dayEvs.map(ev=>(
                     <div key={ev.id} style={{ padding:'10px 14px', borderRadius:10, background:`${ev.color}18`, border:`1px solid ${ev.color}44`, display:'flex', alignItems:'center', gap:10 }}>
                       <div style={{ width:8, height:8, borderRadius:'50%', background:ev.color, flexShrink:0 }}/>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>{ev.title}</div>
-                        <div style={{ fontSize:11, color:'var(--text-tertiary)' }}>{ev.startTime} – {ev.endTime}{ev.purpose?` · ${ev.purpose}`:''}</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ev.title}</div>
+                          {ev.id.startsWith('gcal-') && (
+                            <span style={{ fontSize:9, fontWeight:700, color:'#4285F4', border:'1px solid #4285F4', borderRadius:3, padding:'1px 3px', lineHeight:1, flexShrink:0 }}>G</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize:11, color:'var(--text-tertiary)' }}>{ev.startTime}{ev.endTime ? ` – ${ev.endTime}` : ''}{ev.purpose?` · ${ev.purpose}`:''}</div>
                       </div>
                     </div>
                   ))}
@@ -563,6 +558,46 @@ export function CalendarView() {
   const [events,      setEvents]      = useState<CalendarEvent[]>(() => loadEvents(calKey));
   const [modal,       setModal]       = useState<{ type:'booking'|'busy', days: Date[] } | null>(null);
   const [dayModal,    setDayModal]    = useState<Date | null>(null);
+
+  // ── Google Calendar sync ─────────────────────────────────────────────────
+  const [gcalConnected, setGcalConnected] = useState(() => !!getStoredToken());
+  const [gcalEvents,    setGcalEvents]    = useState<CalendarEvent[]>([]);
+  const [gcalLoading,   setGcalLoading]   = useState(false);
+  const [gcalError,     setGcalError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    const tok = getStoredToken();
+    if (!tok) return;
+    setGcalLoading(true);
+    fetchGoogleEvents(tok.accessToken)
+      .then(evs => { setGcalEvents(evs); setGcalConnected(true); })
+      .catch(() => { clearToken(); setGcalConnected(false); })
+      .finally(() => setGcalLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleConnectGCal = async () => {
+    setGcalLoading(true);
+    setGcalError(null);
+    try {
+      await loadGIS();
+      const tok = await requestNewToken();
+      const evs = await fetchGoogleEvents(tok.accessToken);
+      setGcalEvents(evs);
+      setGcalConnected(true);
+    } catch (err: any) {
+      setGcalError(err.message ?? 'Could not connect Google Calendar');
+    } finally {
+      setGcalLoading(false);
+    }
+  };
+
+  const handleDisconnectGCal = () => {
+    clearToken();
+    setGcalConnected(false);
+    setGcalEvents([]);
+    setGcalError(null);
+  };
 
   const handleDayClick = (day: Date, e: React.MouseEvent) => {
     const multi = e.ctrlKey || e.metaKey || selectMode;
@@ -604,6 +639,8 @@ export function CalendarView() {
 
   const hasSelection = selectedDays.length > 0;
 
+  const allEvents = useMemo(() => [...events, ...gcalEvents], [events, gcalEvents]);
+
   const [menuOpen,       setMenuOpen]       = useState(false);
   const [showDailyNotes, setShowDailyNotes] = useState(true);
   const [showTasks,      setShowTasks]      = useState(true);
@@ -611,6 +648,7 @@ export function CalendarView() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, overflow:'hidden', position:'relative', background:'var(--bg-app)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif' }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 24px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
@@ -618,6 +656,45 @@ export function CalendarView() {
           <Plus size={16}/>
         </button>
         <h1 style={{ fontSize:20, fontWeight:700, color:'var(--text-primary)', margin:0, flex:1 }}>Calendar</h1>
+
+        {/* Google Calendar sync button */}
+        {gcalConnected ? (
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, background:'rgba(66,133,244,0.1)', border:'1px solid rgba(66,133,244,0.3)', fontSize:12, color:'#4285F4', fontWeight:500 }}>
+              <svg width="12" height="12" viewBox="0 0 18 18" fill="none">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              </svg>
+              {gcalLoading ? 'Syncing…' : 'Google Synced'}
+            </div>
+            <button onClick={handleDisconnectGCal} title="Disconnect Google Calendar" style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-tertiary)', padding:'4px 6px', borderRadius:6, display:'flex', fontSize:11 }}>
+              <X size={12}/>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleConnectGCal}
+            disabled={gcalLoading}
+            title={gcalError ?? 'Sync your Google Calendar events'}
+            style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, border:'1px solid var(--border)', background:'none', color: gcalError ? '#ef4444' : 'var(--text-secondary)', fontSize:12, fontWeight:500, cursor: gcalLoading ? 'default' : 'pointer', opacity: gcalLoading ? 0.7 : 1 }}
+          >
+            {gcalLoading ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation:'spin 0.8s linear infinite' }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 18 18" fill="none">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              </svg>
+            )}
+            {gcalLoading ? 'Connecting…' : gcalError ? 'Retry Google Cal' : 'Connect Google Cal'}
+          </button>
+        )}
 
         {/* Select mode button */}
         <button
@@ -701,7 +778,7 @@ export function CalendarView() {
       {/* ── Content ─────────────────────────────────────────────── */}
       {calView==='month' ? (
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          <MonthContent today={today} selectedDays={selectedDays} selectMode={selectMode} events={events} onDayClick={handleDayClick} onDaySelect={handleDaySelect}/>
+          <MonthContent today={today} selectedDays={selectedDays} selectMode={selectMode} events={allEvents} onDayClick={handleDayClick} onDaySelect={handleDaySelect}/>
 
           {/* Daily Notes / Tasks strips (toggled via ⋯ menu) */}
           {(showDailyNotes || showTasks) && (
@@ -727,7 +804,7 @@ export function CalendarView() {
         </div>
       ) : (
         <>
-          <ListContent today={today} startDate={listStart} events={events}/>
+          <ListContent today={today} startDate={listStart} events={allEvents}/>
           <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 24px', borderTop:'1px solid var(--border)', background:'var(--bg-app)', flexShrink:0 }}>
             <button style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color:'var(--text-secondary)', cursor:'pointer', fontSize:13, padding:'4px 8px', borderRadius:6 }}>
               <CheckSquare size={14}/> Add Task
