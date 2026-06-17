@@ -34,8 +34,43 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('dark', isDark);
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+function mixWithWhite(hex: string, pct: number): string {
+  const [r,g,b] = hexToRgb(hex);
+  const mix = (c: number) => Math.round(c*pct + 255*(1-pct));
+  const toH = (n: number) => Math.min(255,n).toString(16).padStart(2,'0');
+  return `#${toH(mix(r))}${toH(mix(g))}${toH(mix(b))}`;
+}
+
+export function applyTintedSidebar(accent: string) {
+  const d = document.documentElement;
+  if (!d.classList.contains('dark')) {
+    d.style.setProperty('--bg-sidebar', mixWithWhite(accent, 0.12));
+    d.style.setProperty('--bg-app', mixWithWhite(accent, 0.07));
+    d.style.setProperty('--bg-block-hover', mixWithWhite(accent, 0.18));
+  }
+}
+
+export function clearTintedSidebar() {
+  const d = document.documentElement;
+  d.style.removeProperty('--bg-sidebar');
+  d.style.removeProperty('--bg-app');
+  d.style.removeProperty('--bg-block-hover');
+}
+
+function initAccentTheme() {
+  const accent = localStorage.getItem('craft_accent');
+  const tinted = localStorage.getItem('craft_sidebar_tinted') === 'true';
+  if (accent) document.documentElement.style.setProperty('--accent', accent);
+  if (tinted && accent) applyTintedSidebar(accent);
+}
+
 const saved = (localStorage.getItem('theme') as Theme) || 'system';
 applyTheme(saved);
+initAccentTheme();
 
 export const useUIStore = create<UIStore>((set) => ({
   theme: saved,

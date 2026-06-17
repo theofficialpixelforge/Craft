@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import {
   X, Globe, Hash, Settings, Palette, SlidersHorizontal, User, RefreshCcw,
   GitMerge, Circle, Bell, Info, ChevronRight, ChevronDown, Plus, Camera,
-  Pencil,
+  Pencil, ImageIcon,
 } from 'lucide-react';
+import { applyTintedSidebar, clearTintedSidebar } from '../../store/uiStore';
 
 interface Props {
   onClose: () => void;
@@ -309,6 +310,53 @@ function AccountPage({ onSignOut, userName }: { onSignOut: () => void; userName?
   );
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+async function extractPalette(file: File): Promise<string[]> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 80;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE; canvas.height = SIZE;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+        const freq: Record<string, number> = {};
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i+3] < 128) continue;
+          const r = Math.round(data[i] / 28) * 28;
+          const g = Math.round(data[i+1] / 28) * 28;
+          const b = Math.round(data[i+2] / 28) * 28;
+          if (r > 215 && g > 215 && b > 215) continue; // near-white
+          if (r < 35 && g < 35 && b < 35) continue;    // near-black
+          if (Math.max(r,g,b) - Math.min(r,g,b) < 25) continue; // too gray
+          freq[`${r},${g},${b}`] = (freq[`${r},${g},${b}`] || 0) + 1;
+        }
+        const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]);
+        const palette: string[] = [];
+        for (const [key] of sorted) {
+          const [r,g,b] = key.split(',').map(Number);
+          const hex = '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
+          const tooClose = palette.some(p => {
+            const [pr,pg,pb] = hexToRgb(p);
+            return Math.abs(r-pr)+Math.abs(g-pg)+Math.abs(b-pb) < 90;
+          });
+          if (!tooClose) palette.push(hex);
+          if (palette.length >= 5) break;
+        }
+        resolve(palette.length > 0 ? palette : ['#2563eb']);
+      };
+      img.src = e.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 const COLOR_GRID = [
   // Blues
   '#2563eb', '#1d4ed8', '#0ea5e9', '#0891b2',
@@ -337,25 +385,50 @@ function AppearancePage() {
   const [accent, setAccent] = useState(() =>
     localStorage.getItem('craft_accent') || '#2563eb'
   );
+  const [sidebarTinted, setSidebarTinted] = useState(() =>
+    localStorage.getItem('craft_sidebar_tinted') === 'true'
+  );
+  const [paletteColors, setPaletteColors] = useState<string[]>([]);
+  const [imgPreview, setImgPreview] = useState('');
+  const [extracting, setExtracting] = useState(false);
   const customInputRef = useRef<HTMLInputElement>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
 
   const applyAccent = (color: string) => {
     setAccent(color);
     document.documentElement.style.setProperty('--accent', color);
-    // Derive a slightly darker hover by reducing lightness — simple approach: just store it
     localStorage.setItem('craft_accent', color);
+    if (sidebarTinted) applyTintedSidebar(color);
   };
 
-  const applyTheme = (t: string) => {
+  const toggleSidebarTint = (on: boolean) => {
+    setSidebarTinted(on);
+    localStorage.setItem('craft_sidebar_tinted', String(on));
+    if (on) applyTintedSidebar(accent);
+    else clearTintedSidebar();
+  };
+
+  const applyThemeMode = (t: string) => {
     setTheme(t);
-    if (t === 'dark') document.documentElement.classList.add('dark');
-    else if (t === 'light') document.documentElement.classList.remove('dark');
-    else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.classList.add('dark');
-      else
-        document.documentElement.classList.remove('dark');
-    }
+    const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+    if (isDark) clearTintedSidebar();
+    else if (sidebarTinted) applyTintedSidebar(accent);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImgPreview(URL.createObjectURL(file));
+    setExtracting(true);
+    const colors = await extractPalette(file);
+    setPaletteColors(colors);
+    setExtracting(false);
+  };
+
+  const applyPaletteColor = (color: string) => {
+    applyAccent(color);
+    toggleSidebarTint(true);
   };
 
   const isCustom = !COLOR_GRID.includes(accent);
@@ -367,7 +440,7 @@ function AppearancePage() {
         {themes.map(t => (
           <button
             key={t.id}
-            onClick={() => applyTheme(t.id)}
+            onClick={() => applyThemeMode(t.id)}
             style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}
           >
             <div style={{
@@ -420,7 +493,6 @@ function AppearancePage() {
             cursor: 'pointer', transition: 'border-color 0.15s',
           }}
         >
-          {/* Colour preview swatch */}
           <div style={{
             width: 28, height: 28, borderRadius: 6, flexShrink: 0,
             background: isCustom ? accent : 'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)',
@@ -432,7 +504,6 @@ function AppearancePage() {
               {isCustom ? accent.toUpperCase() : 'Click to pick any colour'}
             </div>
           </div>
-          {/* Hidden native colour input */}
           <input
             ref={customInputRef}
             type="color"
@@ -442,6 +513,110 @@ function AppearancePage() {
           />
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>▶</div>
         </div>
+      </Section>
+
+      {/* Sidebar Style */}
+      <Section title="Sidebar Style">
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+          In light mode, tint the sidebar and background with your accent colour.
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {([{ on: false, label: 'Neutral' }, { on: true, label: 'Accent Tinted' }] as const).map(opt => (
+            <button
+              key={String(opt.on)}
+              onClick={() => toggleSidebarTint(opt.on)}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                background: sidebarTinted === opt.on ? accent : 'var(--bg-block-hover)',
+                color: sidebarTinted === opt.on ? '#fff' : 'var(--text-secondary)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {sidebarTinted && (
+          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+            {[0.07, 0.12, 0.22, 0.4].map((pct, i) => (
+              <div key={i} style={{
+                flex: 1, height: 20, borderRadius: 4,
+                background: `color-mix(in srgb, ${accent} ${Math.round(pct*100)}%, white)`,
+                opacity: 0.9,
+              }} />
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* Image Palette */}
+      <Section title="Extract Palette from Image">
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+          Upload a photo and we'll pull its colours to theme the app.
+        </p>
+
+        <div
+          onClick={() => imgInputRef.current?.click()}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', borderRadius: 10,
+            background: 'var(--bg-block-hover)', border: '1px solid var(--border)',
+            cursor: 'pointer',
+          }}
+        >
+          {imgPreview ? (
+            <img src={imgPreview} alt="" style={{ width: 44, height: 44, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: 7, background: 'var(--bg-editor)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ImageIcon size={18} style={{ color: 'var(--text-tertiary)' }} />
+            </div>
+          )}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+              {imgPreview ? 'Change Image' : 'Upload Image'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>JPG, PNG, or WEBP</div>
+          </div>
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            style={{ display: 'none' }}
+          />
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>▶</div>
+        </div>
+
+        {extracting && (
+          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+            Extracting colours…
+          </div>
+        )}
+
+        {paletteColors.length > 0 && !extracting && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>
+              Tap a colour to apply as your theme
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {paletteColors.map(c => (
+                <button
+                  key={c}
+                  onClick={() => applyPaletteColor(c)}
+                  title={c}
+                  style={{
+                    flex: 1, height: 48, borderRadius: 8, border: 'none',
+                    background: c, cursor: 'pointer',
+                    outline: accent === c ? '3px solid var(--text-primary)' : '3px solid transparent',
+                    outlineOffset: 2,
+                    transform: accent === c ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.15s',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </Section>
     </div>
   );
