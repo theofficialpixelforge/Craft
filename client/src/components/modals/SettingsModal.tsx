@@ -314,6 +314,30 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
 }
 
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2;
+  if (max === min) return [0, 0, Math.round(l*100)];
+  const d = max - min;
+  const s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+  let h = 0;
+  if (max === r) h = (g-b)/d + (g < b ? 6 : 0);
+  else if (max === g) h = (b-r)/d + 2;
+  else h = (r-g)/d + 4;
+  return [Math.round(h*60), Math.round(s*100), Math.round(l*100)];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1-l);
+  const f = (n: number) => {
+    const k = (n + h/30) % 12;
+    const c = l - a * Math.max(Math.min(k-3, 9-k, 1), -1);
+    return Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2,'0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 async function extractPalette(file: File): Promise<string[]> {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -357,6 +381,76 @@ async function extractPalette(file: File): Promise<string[]> {
   });
 }
 
+function shuffleArr<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateThemeFromPalette(colors: string[], doShuffle: boolean): { vars: Record<string, string>; isDark: boolean } {
+  if (!colors.length) return { vars: {}, isDark: false };
+  const analyzed = colors.map(hex => {
+    const [r,g,b] = hexToRgb(hex);
+    const [h,s,l] = rgbToHsl(r,g,b);
+    return { hex, h, s, l, vibrancy: s * (1 - Math.abs(l-50)/50) };
+  });
+  // Most vibrant color → accent
+  const accentC = [...analyzed].sort((a,b) => b.vibrancy - a.vibrancy)[0];
+  // Remaining colors → backgrounds
+  let bgC = analyzed.filter(c => c !== accentC);
+  if (!bgC.length) bgC = [accentC];
+  if (doShuffle) bgC = shuffleArr(bgC);
+  // Ensure we always have 4 slots
+  while (bgC.length < 4) bgC = [...bgC, ...bgC];
+  const [b0, b1, b2, b3] = bgC;
+  const avgL = analyzed.reduce((s,c) => s+c.l, 0) / analyzed.length;
+  const isDark = avgL < 40;
+  const vars: Record<string, string> = { '--accent': accentC.hex };
+  if (isDark) {
+    vars['--bg-app']         = hslToHex(b0.h, Math.min(b0.s*0.4, 18), 11);
+    vars['--bg-editor']      = hslToHex(b1.h, Math.min(b1.s*0.4, 18), 16);
+    vars['--bg-sidebar']     = hslToHex(b2.h, Math.min(b2.s*0.45, 22), 14);
+    vars['--bg-block-hover'] = hslToHex(b3.h, Math.min(b3.s*0.45, 24), 21);
+    vars['--border']         = hslToHex(b0.h, Math.min(b0.s*0.3, 14), 28);
+    vars['--text-primary']   = '#EBEBEB';
+    vars['--text-secondary'] = '#888888';
+    vars['--text-tertiary']  = '#555555';
+  } else {
+    vars['--bg-editor']      = hslToHex(b0.h, Math.min(b0.s*0.12, 7),  98);
+    vars['--bg-app']         = hslToHex(b1.h, Math.min(b1.s*0.22, 14), 94);
+    vars['--bg-sidebar']     = hslToHex(b2.h, Math.min(b2.s*0.32, 22), 90);
+    vars['--bg-block-hover'] = hslToHex(b3.h, Math.min(b3.s*0.38, 28), 86);
+    vars['--border']         = hslToHex(b0.h, Math.min(b0.s*0.18, 12), 82);
+    vars['--text-primary']   = '#1A1A1A';
+    vars['--text-secondary'] = '#7A7A7A';
+    vars['--text-tertiary']  = '#ABABAB';
+  }
+  return { vars, isDark };
+}
+
+function applyThemeVarsAndStore(vars: Record<string, string>, isDark: boolean) {
+  Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k, v));
+  document.documentElement.classList.toggle('dark', isDark);
+  localStorage.setItem('craft_image_theme', JSON.stringify({ vars, isDark }));
+  localStorage.setItem('craft_sidebar_tinted', 'false');
+}
+
+const IMAGE_THEME_VARS = ['--bg-app','--bg-editor','--bg-sidebar','--bg-block-hover','--border','--text-primary','--text-secondary','--text-tertiary','--accent'];
+
+function clearImageTheme() {
+  IMAGE_THEME_VARS.forEach(v => document.documentElement.style.removeProperty(v));
+  localStorage.removeItem('craft_image_theme');
+  const s = localStorage.getItem('theme') || 'system';
+  const pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.classList.toggle('dark', s === 'dark' || (s === 'system' && pd));
+  const a = localStorage.getItem('craft_accent');
+  if (a) document.documentElement.style.setProperty('--accent', a);
+  if (localStorage.getItem('craft_sidebar_tinted') === 'true' && a) applyTintedSidebar(a);
+}
+
 const COLOR_GRID = [
   // Blues
   '#2563eb', '#1d4ed8', '#0ea5e9', '#0891b2',
@@ -388,6 +482,7 @@ function AppearancePage() {
   const [sidebarTinted, setSidebarTinted] = useState(() =>
     localStorage.getItem('craft_sidebar_tinted') === 'true'
   );
+  const [imageThemeActive, setImageThemeActive] = useState(() => !!localStorage.getItem('craft_image_theme'));
   const [paletteColors, setPaletteColors] = useState<string[]>([]);
   const [imgPreview, setImgPreview] = useState('');
   const [extracting, setExtracting] = useState(false);
@@ -409,6 +504,7 @@ function AppearancePage() {
   };
 
   const applyThemeMode = (t: string) => {
+    if (imageThemeActive) { clearImageTheme(); setImageThemeActive(false); }
     setTheme(t);
     const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', isDark);
@@ -424,11 +520,30 @@ function AppearancePage() {
     const colors = await extractPalette(file);
     setPaletteColors(colors);
     setExtracting(false);
+    setImageThemeActive(false);
   };
 
-  const applyPaletteColor = (color: string) => {
-    applyAccent(color);
-    toggleSidebarTint(true);
+  const handleApplyImageTheme = () => {
+    const { vars, isDark } = generateThemeFromPalette(paletteColors, false);
+    applyThemeVarsAndStore(vars, isDark);
+    setImageThemeActive(true);
+    setSidebarTinted(false);
+    if (vars['--accent']) setAccent(vars['--accent']);
+  };
+
+  const handleShuffleImageTheme = () => {
+    const { vars, isDark } = generateThemeFromPalette(paletteColors, true);
+    applyThemeVarsAndStore(vars, isDark);
+    setImageThemeActive(true);
+    setSidebarTinted(false);
+    if (vars['--accent']) setAccent(vars['--accent']);
+  };
+
+  const handleClearImageTheme = () => {
+    clearImageTheme();
+    setImageThemeActive(false);
+    setAccent(localStorage.getItem('craft_accent') || '#2563eb');
+    setSidebarTinted(localStorage.getItem('craft_sidebar_tinted') === 'true');
   };
 
   const isCustom = !COLOR_GRID.includes(accent);
@@ -518,7 +633,9 @@ function AppearancePage() {
       {/* Sidebar Style */}
       <Section title="Sidebar Style">
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
-          In light mode, tint the sidebar and background with your accent colour.
+          {imageThemeActive
+            ? 'Image theme is active — clear it below to use sidebar style.'
+            : 'In light mode, tint the sidebar and background with your accent colour.'}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           {([{ on: false, label: 'Neutral' }, { on: true, label: 'Accent Tinted' }] as const).map(opt => (
@@ -595,26 +712,48 @@ function AppearancePage() {
 
         {paletteColors.length > 0 && !extracting && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>
-              Tap a colour to apply as your theme
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            {/* Colour swatches — full palette preview */}
+            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', height: 36, marginBottom: 10 }}>
               {paletteColors.map(c => (
-                <button
-                  key={c}
-                  onClick={() => applyPaletteColor(c)}
-                  title={c}
-                  style={{
-                    flex: 1, height: 48, borderRadius: 8, border: 'none',
-                    background: c, cursor: 'pointer',
-                    outline: accent === c ? '3px solid var(--text-primary)' : '3px solid transparent',
-                    outlineOffset: 2,
-                    transform: accent === c ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'all 0.15s',
-                  }}
-                />
+                <div key={c} style={{ flex: 1, background: c }} />
               ))}
             </div>
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleApplyImageTheme}
+                style={{
+                  flex: 2, padding: '10px 0', borderRadius: 8, border: 'none',
+                  background: imageThemeActive ? 'var(--accent)' : '#3b82f6',
+                  color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+              >
+                {imageThemeActive ? '✓ Theme Applied' : 'Apply Theme'}
+              </button>
+              <button
+                onClick={handleShuffleImageTheme}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8,
+                  border: '1px solid var(--border)', background: 'transparent',
+                  color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ⟳ Shuffle
+              </button>
+            </div>
+            {imageThemeActive && (
+              <button
+                onClick={handleClearImageTheme}
+                style={{
+                  marginTop: 8, width: '100%', background: 'none', border: 'none',
+                  color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer',
+                  textAlign: 'center' as const, textDecoration: 'underline',
+                }}
+              >
+                Clear image theme
+              </button>
+            )}
           </div>
         )}
       </Section>

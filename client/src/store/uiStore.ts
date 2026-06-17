@@ -61,7 +61,22 @@ export function clearTintedSidebar() {
   d.style.removeProperty('--bg-block-hover');
 }
 
+function initImageTheme(): boolean {
+  const stored = localStorage.getItem('craft_image_theme');
+  if (!stored) return false;
+  try {
+    const { vars, isDark } = JSON.parse(stored) as { vars: Record<string, string>; isDark: boolean };
+    Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k, v));
+    document.documentElement.classList.toggle('dark', isDark);
+    return true;
+  } catch {
+    localStorage.removeItem('craft_image_theme');
+    return false;
+  }
+}
+
 function initAccentTheme() {
+  if (localStorage.getItem('craft_image_theme')) return;
   const accent = localStorage.getItem('craft_accent');
   const tinted = localStorage.getItem('craft_sidebar_tinted') === 'true';
   if (accent) document.documentElement.style.setProperty('--accent', accent);
@@ -70,6 +85,7 @@ function initAccentTheme() {
 
 const saved = (localStorage.getItem('theme') as Theme) || 'system';
 applyTheme(saved);
+initImageTheme();
 initAccentTheme();
 
 export const useUIStore = create<UIStore>((set) => ({
