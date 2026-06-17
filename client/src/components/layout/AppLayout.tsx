@@ -3,7 +3,7 @@ import {
   LayoutGrid, CheckSquare, Calendar, ClipboardList, Users, Star, Folder,
   Search, Bell, HelpCircle, ChevronDown, PanelLeft, Monitor, Share2,
   Plus, ChevronRight, MoreHorizontal, Trash2, PenSquare, FolderOpen,
-  Settings, User, Activity, FileText,
+  Settings, User, Activity, FileText, MessageCirclePlus,
 } from 'lucide-react';
 import { DocumentEditor } from '../editor/DocumentEditor';
 import { HomeView } from '../home/HomeView';
@@ -16,7 +16,7 @@ import { MonthlyReportsView } from '../views/MonthlyReportsView';
 import { EmployeeProfilesView } from '../views/EmployeeProfilesView';
 import { UnsortedView } from '../views/UnsortedView';
 import { FolderView } from '../views/FolderView';
-import { AssistantPanel } from '../views/AssistantPanel';
+import { LogQueryModal } from '../modals/LogQueryModal';
 import { OnboardingCarousel } from '../onboarding/OnboardingCarousel';
 import { SearchModal } from '../search/SearchModal';
 import { EmojiPickerModal } from '../modals/EmojiPickerModal';
@@ -115,7 +115,7 @@ export function AppLayout({ userName, role = 'manager', employeeId, onSignOut }:
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem(ONBOARDING_KEY));
   const [nav, setNav] = useState<NavView>('all-docs');
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [queryOpen,    setQueryOpen]    = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [spaceMenuOpen, setSpaceMenuOpen] = useState(false);
 
@@ -177,9 +177,6 @@ export function AppLayout({ userName, role = 'manager', employeeId, onSignOut }:
     : typeof nav === 'object' && nav.type === 'folder'
       ? findDoc(tree, nav.id)
       : null;
-
-  // Assistant context label
-  const assistantCtx = typeof nav === 'object' ? findDoc(tree, nav.id)?.title ?? 'All Docs' : nav === 'all-docs' ? 'All Docs' : 'Craft';
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg-app)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif' }}>
@@ -353,27 +350,21 @@ export function AppLayout({ userName, role = 'manager', employeeId, onSignOut }:
             )}
           </div>
 
-          {/* Assistant panel */}
-          {assistantOpen && (
-            <AssistantPanel onClose={() => setAssistantOpen(false)} contextLabel={assistantCtx}/>
-          )}
-
-          {/* Assistant button */}
-          {!assistantOpen && (
-            <button
-              onClick={() => setAssistantOpen(true)}
-              style={{ position:'absolute', bottom:20, right:20, display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:20, background:'var(--bg-sidebar)', border:'1px solid var(--border)', color:'var(--text-primary)', fontSize:13, fontWeight:500, cursor:'pointer', boxShadow:'0 4px 16px rgba(0,0,0,0.2)' }}
-            >
-              <div style={{ width:18, height:18, borderRadius:'50%', background:'conic-gradient(from 0deg,#ff3b8f,#3b82f6,#7c3aed,#ff3b8f)', flexShrink:0 }}/>
-              Assistant
-            </button>
-          )}
+          {/* Log a Query button */}
+          <button
+            onClick={() => setQueryOpen(true)}
+            style={{ position:'absolute', bottom:20, right:20, display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:20, background:'var(--bg-sidebar)', border:'1px solid var(--border)', color:'var(--text-primary)', fontSize:13, fontWeight:500, cursor:'pointer', boxShadow:'0 4px 16px rgba(0,0,0,0.2)' }}
+          >
+            <MessageCirclePlus size={16} style={{ color:'var(--accent)', flexShrink:0 }}/>
+            Log a Query
+          </button>
         </div>
       </div>
 
       {/* Portals */}
       {showOnboarding && <OnboardingCarousel onDone={handleDoneOnboarding}/>}
       {searchModalOpen && <SearchModal/>}
+      {queryOpen && <LogQueryModal userName={userName} onClose={() => setQueryOpen(false)}/>}
       {emojiPickerOpen && <EmojiPickerModal/>}
       {settingsOpen && (
         <SettingsModal
