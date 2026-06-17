@@ -77,9 +77,9 @@ function AboutPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 28, fontWeight: 900, color: 'white', letterSpacing: -1,
           flexShrink: 0,
-        }}>C</div>
+        }}>MO</div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Craft</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>My Org</div>
           <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>1.0.0</div>
         </div>
       </div>
@@ -97,7 +97,7 @@ function AboutPage() {
           Interested in new and upcoming features? Follow us on X and be the first one to know!
         </p>
         <button style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-block-hover)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', width: 'fit-content' }}>
-          Follow @CraftDocs on X
+          Follow @MyOrgApp on X
         </button>
       </Section>
 
@@ -130,7 +130,7 @@ function NotificationsPage() {
 
       <Section title="Reminders">
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-          Craft will send you notifications when a reminder is due.
+          My Org will send you notifications when a reminder is due.
         </p>
         <SettingRow label="Email Notifications">
           <Toggle on={s.reminders} onChange={v => setS(p => ({ ...p, reminders: v }))} />
@@ -204,7 +204,7 @@ function IntegrationsPage() {
     { name: 'Github', color: '#333', letter: 'G', action: 'Connect' },
     { name: 'Jira', color: '#0052cc', letter: 'J', action: 'Connect' },
     { name: 'Linear', color: '#5e6ad2', letter: 'L', action: 'Connect' },
-    { name: 'Email to Craft', color: '#3b82f6', letter: 'E', action: 'Configure' },
+    { name: 'Email to My Org', color: '#3b82f6', letter: 'E', action: 'Configure' },
     { name: 'Readwise', color: '#e5a00d', letter: 'R', action: 'Configure' },
   ];
   return (
@@ -233,8 +233,8 @@ function SubscriptionsPage() {
   return (
     <div>
       <div style={{ padding: 18, background: 'var(--bg-block-hover)', borderRadius: 12, marginBottom: 28 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>My Craft · Starter</div>
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>You are using the free version of Craft.</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>My Org · Starter</div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>You are using the free version of My Org.</div>
         <div style={{ padding: '12px 14px', background: 'var(--bg-editor)', borderRadius: 8, marginBottom: 14, fontSize: 13, color: 'var(--text-secondary)' }}>
           You have used <strong style={{ color: 'var(--text-primary)' }}>{used}</strong> out of <strong style={{ color: 'var(--text-primary)' }}>{total}</strong> blocks available on this plan.
         </div>
@@ -513,7 +513,7 @@ function AdvancedPage() {
   return (
     <div>
       <Section>
-        <SettingRow label="Craft Document Link Open Preference" desc="Customize if Craft links should open in Craft for Web or our desktop app.">
+        <SettingRow label="My Org Document Link Open Preference" desc="Customize if My Org links should open in My Org for Web or our desktop app.">
           <SettingsDropdown id="link" value={s.linkPref} options={['Open in App', 'Open in Browser', 'Always ask']} onChange={v => setS(p => ({ ...p, linkPref: v }))} openId={openDropdown} setOpenId={setOpenDropdown} />
         </SettingRow>
       </Section>
@@ -548,8 +548,8 @@ function PublishedPage() {
       </div>
       <Section>
         {[
-          { label: 'Your craft.me Link', desc: 'Use your custom craft.me link when publishing Craft documents.', value: 'Not set' },
-          { label: 'Setup Custom Domain', desc: 'Use your own domain when publishing Craft documents.', value: 'Not set' },
+          { label: 'Your myorg.app Link', desc: 'Use your custom link when publishing My Org documents.', value: 'Not set' },
+          { label: 'Setup Custom Domain', desc: 'Use your own domain when publishing My Org documents.', value: 'Not set' },
         ].map(item => (
           <div key={item.label} style={{ padding: '13px 16px', background: 'var(--bg-block-hover)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>

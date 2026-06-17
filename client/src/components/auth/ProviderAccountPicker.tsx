@@ -51,7 +51,7 @@ function GooglePicker({ accounts, onSelect, onClose }: { accounts: SavedAccount[
         <p style={{ margin:'0 0 14px', fontSize:14, color:'#202124', fontWeight:500 }}>
           {addMode && accounts.length === 0 ? 'Sign in with Google' : 'Choose an account'}
         </p>
-        <p style={{ margin:'0 0 14px', fontSize:12, color:'#5f6368' }}>to continue to <strong style={{ color:'#202124' }}>Craft</strong></p>
+        <p style={{ margin:'0 0 14px', fontSize:12, color:'#5f6368' }}>to continue to <strong style={{ color:'#202124' }}>My Org</strong></p>
       </div>
 
       {/* Account list */}
@@ -146,7 +146,7 @@ function MicrosoftPicker({ accounts, onSelect, onClose }: { accounts: SavedAccou
         <div style={{ fontSize:18, fontWeight:600, color:'#1b1b1b', marginBottom:6 }}>
           {addMode && accounts.length === 0 ? 'Sign in' : 'Pick an account'}
         </div>
-        <div style={{ fontSize:13, color:'#605e5c', marginBottom:16 }}>to continue to <strong>Craft</strong></div>
+        <div style={{ fontSize:13, color:'#605e5c', marginBottom:16 }}>to continue to <strong>My Org</strong></div>
       </div>
 
       {/* List */}
@@ -228,7 +228,7 @@ function ApplePicker({ accounts, onSelect, onClose }: { accounts: SavedAccount[]
           <path d="M22.83 17.97c-.04-4.13 3.37-6.13 3.52-6.22-1.92-2.81-4.9-3.19-5.96-3.23-2.54-.26-4.96 1.49-6.25 1.49-1.28 0-3.27-1.45-5.37-1.42-2.76.04-5.32 1.61-6.74 4.09-2.88 4.99-.74 12.39 2.06 16.44 1.37 1.98 3 4.2 5.14 4.12 2.07-.08 2.85-1.33 5.35-1.33 2.49 0 3.2 1.33 5.38 1.28 2.23-.04 3.63-2.01 4.98-3.99a17.5 17.5 0 0 0 2.27-4.61c-.05-.02-4.32-1.65-4.36-6.62zM18.63 5.62c1.12-1.39 1.88-3.28 1.67-5.2-1.61.07-3.63 1.11-4.79 2.46-1.03 1.2-1.95 3.16-1.71 5 1.81.14 3.64-.92 4.83-2.26z"/>
         </svg>
         <div style={{ fontSize:17, fontWeight:600, color:'#fff', marginBottom:4 }}>Sign in with Apple</div>
-        <div style={{ fontSize:13, color:'#8e8e93', marginBottom:16 }}>Select an account to continue to <strong style={{ color:'#fff' }}>Craft</strong></div>
+        <div style={{ fontSize:13, color:'#8e8e93', marginBottom:16 }}>Select an account to continue to <strong style={{ color:'#fff' }}>My Org</strong></div>
       </div>
 
       {!addMode && (

@@ -39,7 +39,7 @@ function KanbanPreview() {
 
 function MermaidPreview() {
   const boxes = [
-    { id: 'start', label: 'Start Using Craft', x: 130, y: 20, w: 120, color: '#374151', text: '#e5e7eb' },
+    { id: 'start', label: 'Start Using My Org', x: 130, y: 20, w: 120, color: '#374151', text: '#e5e7eb' },
     { id: 'doc', label: 'Create First Doc', x: 50, y: 90, w: 100, color: '#374151', text: '#e5e7eb' },
     { id: 'tmpl', label: 'Explore Templates', x: 210, y: 90, w: 110, color: '#374151', text: '#e5e7eb' },
     { id: 'rich', label: 'Rich Formatting Options', x: 110, y: 165, w: 140, color: '#374151', text: '#e5e7eb' },
@@ -180,7 +180,7 @@ const SLIDES = [
     visual: <UpgradePreview />,
     bgDark: false,
     title: 'Upgrade now',
-    desc: 'Upgrade to Craft Plus or Craft Family with a 40% discount. Available for a limited time, for new subscribers only.',
+    desc: 'Upgrade to My Org Plus or My Org Family with a 40% discount. Available for a limited time, for new subscribers only.',
     btn: 'Use Offer',
     isUpgrade: true,
   },

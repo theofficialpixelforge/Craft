@@ -275,7 +275,7 @@ export function HomeView({ docs, onSelectDoc, onNewDoc }: Props) {
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>All Docs</h1>
         <div style={{ flex: 1 }} />
 
-        {/* Get Craft Plus */}
+        {/* Get My Org Plus */}
         <button style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '6px 12px', borderRadius: 8,
@@ -283,7 +283,7 @@ export function HomeView({ docs, onSelectDoc, onNewDoc }: Props) {
           color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
         }}>
           <Crown size={13} style={{ color: '#f59e0b' }} />
-          Get Craft Plus
+          Get My Org Plus
         </button>
 
         {/* View toggles */}

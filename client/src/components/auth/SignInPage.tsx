@@ -37,16 +37,13 @@ function MicrosoftLogo() {
   );
 }
 
-// ── Craft Logo Icon ────────────────────────────────────────────────────────
-function CraftLogo() {
+// ── My Org Logo Icon ──────────────────────────────────────────────────────
+function MyOrgLogo() {
   return (
     <div className="relative w-16 h-16 mb-6">
       <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
         <rect width="64" height="64" rx="14" fill="url(#logo-grad)"/>
-        <path
-          d="M32 12C21.0 12 12 21.0 12 32C12 43.0 21.0 52 32 52C37.8 52 43.0 49.4 46.6 45.2L40.8 39.4C38.6 42.0 35.5 43.6 32 43.6C25.6 43.6 20.4 38.4 20.4 32C20.4 25.6 25.6 20.4 32 20.4C35.5 20.4 38.6 22.0 40.8 24.6L46.6 18.8C43.0 14.6 37.8 12 32 12Z"
-          fill="white"
-        />
+        <text x="32" y="40" textAnchor="middle" fill="white" fontFamily="-apple-system,BlinkMacSystemFont,sans-serif" fontWeight="700" fontSize="20">MO</text>
         <defs>
           <linearGradient id="logo-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
             <stop stopColor="#5B6CF0"/>
@@ -119,9 +116,9 @@ export function SignInPage({ onSignIn }: Props) {
 
       {/* Card */}
       <div className="signin-card">
-        <CraftLogo />
+        <MyOrgLogo />
 
-        <h1 className="signin-title">Welcome to Craft</h1>
+        <h1 className="signin-title">Welcome to My Org</h1>
         <p className="signin-subtitle">
           Please confirm your email to continue or{' '}
           <button className="sso-link" onClick={() => onSignIn(email)}>continue with SSO</button>

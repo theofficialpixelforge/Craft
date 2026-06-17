@@ -254,7 +254,7 @@ export function AssistantPanel({ onClose, contextLabel = 'All Docs' }: Props) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={streaming}
-            placeholder="Message Craft Assistant"
+            placeholder="Message My Org Assistant"
             style={{ width:'100%', background:'transparent', border:'none', outline:'none', fontSize:13, color:'var(--text-primary)', boxSizing:'border-box', opacity: streaming ? 0.5 : 1 }}
           />
         </div>

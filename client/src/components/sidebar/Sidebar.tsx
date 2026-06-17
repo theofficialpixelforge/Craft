@@ -45,7 +45,7 @@ export function Sidebar({ onSelectDocument, userName }: Props) {
       {/* Header */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-2">
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--text-primary)] truncate">Craft</span>
+          <span className="text-sm font-semibold text-[var(--text-primary)] truncate">My Org</span>
         </div>
         <Button size="sm" onClick={openSearchModal} title="Search (Cmd+K)">
           <Search size={14} />
@@ -117,7 +117,7 @@ export function Sidebar({ onSelectDocument, userName }: Props) {
             </div>
           )}
           <span className="text-xs text-[var(--text-tertiary)] truncate">
-            {userName ? userName : 'Craft Clone'}
+            {userName ? userName : 'My Org'}
           </span>
         </div>
         <ThemeToggle />

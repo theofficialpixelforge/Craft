@@ -23,7 +23,7 @@ export function FolderView({ folder, onSelectDoc, onNewDoc }: Props) {
         </h1>
 
         <button style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, background:'transparent', border:'1px solid var(--border)', color:'var(--text-secondary)', fontSize:12, fontWeight:500, cursor:'pointer' }}>
-          <Crown size={13} style={{ color:'#f59e0b' }} /> Get Craft Plus
+          <Crown size={13} style={{ color:'#f59e0b' }} /> Get My Org Plus
         </button>
         <div style={{ display:'flex', border:'1px solid var(--border)', borderRadius:8, overflow:'hidden' }}>
           {[<LayoutGrid size={14}/>, <Columns size={14}/>, <LayoutList size={14}/>].map((icon, i) => (
