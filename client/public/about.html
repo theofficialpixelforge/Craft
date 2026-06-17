@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- PASTE YOUR GOOGLE SITE VERIFICATION META TAG HERE -->
+  <title>Craft — Workplace Productivity for Teams</title>
+  <meta name="description" content="Craft is a workplace productivity app for managing documents, calendars, leave tracking, and team communication — all in one place." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #d1d5db;
+      line-height: 1.6;
+    }
+
+    /* Nav */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid #1f2937;
+      position: sticky; top: 0;
+      background: rgba(15,17,23,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: linear-gradient(135deg, #5B6CF0, #8B5CF6);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: 16px;
+    }
+    .nav-logo-text { font-size: 18px; font-weight: 700; color: #f9fafb; }
+    .nav-signin {
+      padding: 9px 22px; border-radius: 8px;
+      background: linear-gradient(135deg, #5B6CF0, #8B5CF6);
+      color: white; font-size: 14px; font-weight: 600;
+      text-decoration: none; transition: opacity 0.15s;
+    }
+    .nav-signin:hover { opacity: 0.85; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 100px 24px 80px;
+      max-width: 760px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 20px;
+      background: rgba(91,108,240,0.15); border: 1px solid rgba(91,108,240,0.3);
+      color: #818cf8; font-size: 13px; font-weight: 500;
+      margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 5vw, 58px);
+      font-weight: 800; color: #f9fafb;
+      line-height: 1.15; margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #5B6CF0, #8B5CF6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 18px; color: #9ca3af;
+      max-width: 560px; margin: 0 auto 40px; line-height: 1.7;
+    }
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 32px; border-radius: 10px;
+      background: linear-gradient(135deg, #5B6CF0, #8B5CF6);
+      color: white; font-size: 16px; font-weight: 600;
+      text-decoration: none; transition: transform 0.15s, opacity 0.15s;
+      box-shadow: 0 4px 20px rgba(91,108,240,0.35);
+    }
+    .hero-cta:hover { transform: translateY(-1px); opacity: 0.92; }
+
+    /* Features */
+    .features {
+      max-width: 1040px; margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .features-label {
+      text-align: center;
+      font-size: 13px; font-weight: 700; color: #5B6CF0;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .features h2 {
+      text-align: center;
+      font-size: 32px; font-weight: 700; color: #f9fafb;
+      margin-bottom: 56px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #161b27;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 28px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: rgba(91,108,240,0.4); }
+    .card-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 16px;
+    }
+    .card h3 { font-size: 16px; font-weight: 600; color: #f9fafb; margin-bottom: 8px; }
+    .card p { font-size: 14px; color: #6b7280; line-height: 1.6; }
+
+    /* Google scope section */
+    .scope-section {
+      max-width: 760px; margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+    .scope-box {
+      background: #161b27;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 36px 40px;
+    }
+    .scope-box h2 { font-size: 20px; font-weight: 700; color: #f9fafb; margin-bottom: 8px; }
+    .scope-box > p { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+    .scope-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .scope-list li {
+      display: flex; align-items: flex-start; gap: 12px;
+      font-size: 14px; color: #9ca3af;
+    }
+    .scope-list li::before {
+      content: '✓'; color: #22c55e;
+      font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .scope-list li strong { color: #f9fafb; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid #1f2937;
+      font-size: 13px; color: #4b5563;
+    }
+    footer a { color: #6b7280; text-decoration: none; }
+    footer a:hover { color: #9ca3af; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/about.html">
+      <div class="nav-logo-icon">C</div>
+      <span class="nav-logo-text">Craft</span>
+    </a>
+    <a class="nav-signin" href="/">Sign In →</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">✦ Workplace Productivity</div>
+    <h1>Everything your team needs,<br/><span>in one place</span></h1>
+    <p>
+      Craft is an all-in-one workplace app for documents, calendar management,
+      leave tracking, and team communication — built for modern teams.
+    </p>
+    <a class="hero-cta" href="/">Get Started →</a>
+  </section>
+
+  <section class="features">
+    <p class="features-label">Features</p>
+    <h2>Built for how teams actually work</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon" style="background:rgba(91,108,240,0.12);">📝</div>
+        <h3>Document Editor</h3>
+        <p>Create rich documents with 16+ block types — headings, tables, columns, and more. Like Notion, but faster.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(59,130,246,0.12);">📅</div>
+        <h3>Calendar &amp; Scheduling</h3>
+        <p>Manage bookings and events in a month or list view. Syncs with your Google Calendar automatically.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(34,197,94,0.12);">🌿</div>
+        <h3>Leave Tracker</h3>
+        <p>Managers track leave balances and approve time off. Employees see their own accruals and history in real time.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(234,179,8,0.12);">👥</div>
+        <h3>Employee Profiles</h3>
+        <p>Centralised directory with contact info, employment details, leave history, and internal notes per employee.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(236,72,153,0.12);">📊</div>
+        <h3>Reports &amp; Updates</h3>
+        <p>Daily updates and monthly reports with role-based views — managers see the full picture, interns see their own.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:rgba(239,68,68,0.12);">🔒</div>
+        <h3>Role-Based Access</h3>
+        <p>Managers and interns each see only what they need. Password-protected accounts with per-employee credentials.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scope-section">
+    <div class="scope-box">
+      <h2>Google Calendar Integration</h2>
+      <p>Craft requests read-only access to your Google Calendar to display your events alongside Craft's calendar. Here's exactly what we do and don't do:</p>
+      <ul class="scope-list">
+        <li><strong>We read</strong> your Google Calendar events to show them in the Craft calendar view.</li>
+        <li><strong>We never write</strong>, create, modify, or delete any of your Google Calendar events.</li>
+        <li><strong>We never store</strong> your calendar data on any server — events are fetched live and displayed in your browser only.</li>
+        <li><strong>Your token</strong> is stored only in your browser's local storage and is never sent to our servers.</li>
+        <li><strong>You can disconnect</strong> at any time using the disconnect button in the Calendar view.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 PixelForge Studios &nbsp;·&nbsp;
+      <a href="/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="/">Sign In</a>
+    </p>
+  </footer>
+
+</body>
+</html>
