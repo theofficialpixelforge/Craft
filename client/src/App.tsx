@@ -16,14 +16,38 @@ interface AuthData {
   employeeId: string | null;
 }
 
+// ── Saved accounts (email → name) ─────────────────────────────────────────────
+
+const SK_ACCOUNTS = 'craft_accounts';
+interface SavedAccount { email: string; firstName: string; lastName: string; }
+
+function findAccount(email: string): SavedAccount | null {
+  try {
+    const list: SavedAccount[] = JSON.parse(localStorage.getItem(SK_ACCOUNTS) ?? '[]');
+    return list.find(a => a.email.toLowerCase() === email.toLowerCase()) ?? null;
+  } catch { return null; }
+}
+
+function upsertAccount(email: string, firstName: string, lastName: string) {
+  try {
+    const list: SavedAccount[] = JSON.parse(localStorage.getItem(SK_ACCOUNTS) ?? '[]');
+    const idx = list.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+    if (idx >= 0) list[idx] = { email, firstName, lastName };
+    else list.push({ email, firstName, lastName });
+    localStorage.setItem(SK_ACCOUNTS, JSON.stringify(list));
+  } catch {}
+}
+
+// ── Session restore ───────────────────────────────────────────────────────────
+
 function loadAuthState(): AuthData {
   try {
     const raw = localStorage.getItem('craft_auth');
     if (raw) {
       const data = JSON.parse(raw);
-      if (data.firstName && data.role) return { step: 'app', ...data };
-      if (data.firstName)              return { step: 'role', ...data, role: null, employeeId: null };
-      if (data.email)                  return { step: 'name', ...data, firstName: '', lastName: '', role: null, employeeId: null };
+      if (data.firstName && data.role) return { step: 'app',    ...data };
+      if (data.firstName)              return { step: 'role',   ...data, role: null, employeeId: null };
+      if (data.email)                  return { step: 'name',   ...data, firstName: '', lastName: '', role: null, employeeId: null };
     }
   } catch {}
   return { step: 'signin', email: '', firstName: '', lastName: '', role: null, employeeId: null };
@@ -40,15 +64,26 @@ export default function App() {
 
   const handleSignIn = (signedInEmail: string) => {
     const e = signedInEmail || email;
-    localStorage.setItem('craft_auth', JSON.stringify({ email: e }));
-    setEmail(e);
-    setStep('name');
+    const saved = findAccount(e);
+    if (saved) {
+      // Returning user — skip the name step entirely
+      setEmail(e);
+      setFirstName(saved.firstName);
+      setLastName(saved.lastName);
+      localStorage.setItem('craft_auth', JSON.stringify({ email: e, firstName: saved.firstName, lastName: saved.lastName }));
+      setStep('role');
+    } else {
+      localStorage.setItem('craft_auth', JSON.stringify({ email: e }));
+      setEmail(e);
+      setStep('name');
+    }
   };
 
   const handleName = (first: string, last: string) => {
     setFirstName(first);
     setLastName(last);
     localStorage.setItem('craft_auth', JSON.stringify({ email, firstName: first, lastName: last }));
+    upsertAccount(email, first, last);
     setStep('role');
   };
 
