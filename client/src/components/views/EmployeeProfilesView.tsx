@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Users, Plus, X, Trash2, Edit2, ChevronDown,
   Mail, Phone, MapPin, AlertTriangle, FileX,
-  Clock, CalendarCheck, Activity,
+  Clock, CalendarCheck, Activity, Eye, EyeOff, Lock,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -24,6 +24,7 @@ export interface EmployeeProfile {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  password?: string;
 }
 
 type LeaveType = 'annual' | 'sick' | 'family';
@@ -368,6 +369,9 @@ export function EmployeeProfilesView() {
   const [editEmp,  setEditEmp]        = useState<EmployeeProfile | null>(null);
   const [menuOpen, setMenuOpen]       = useState(false);
   const [notes, setNotes]             = useState('');
+  const [showEmpPw,  setShowEmpPw]   = useState(false);
+  const [editingPw,  setEditingPw]   = useState(false);
+  const [newPw,      setNewPw]       = useState('');
 
   const saveEmployees = useCallback((next: EmployeeProfile[]) => {
     setEmployees(next);
@@ -405,12 +409,26 @@ export function EmployeeProfilesView() {
     saveEmployees(next);
   };
 
+  const handleSavePassword = () => {
+    if (!selected) return;
+    const next = employees.map(e=>e.id===selected.id ? { ...e, password: newPw.trim() || undefined } : e);
+    saveEmployees(next);
+    setEditingPw(false);
+    setNewPw('');
+  };
+
   const filtered   = employees.filter(e=>e.name.toLowerCase().includes(search.toLowerCase().trim()));
   const selected   = employees.find(e=>e.id===selectedId) ?? null;
   const isDeactivated = selected?.status === 'deactivated';
 
-  // Sync notes field when selection changes
-  React.useEffect(() => { setNotes(selected?.notes ?? ''); setTab('overview'); }, [selectedId]);
+  // Sync notes + pw state when selection changes
+  React.useEffect(() => {
+    setNotes(selected?.notes ?? '');
+    setTab('overview');
+    setShowEmpPw(false);
+    setEditingPw(false);
+    setNewPw('');
+  }, [selectedId]);
 
   const tabStyle = (t: ProfileTab): React.CSSProperties => ({
     padding:'6px 14px', borderRadius:7, border:'none', cursor:'pointer', fontSize:13,
@@ -566,6 +584,47 @@ export function EmployeeProfilesView() {
                     Fill in more details by clicking <strong>Edit</strong> above.
                   </div>
                 )}
+
+                {/* Login Password */}
+                <div style={{ marginTop:20,paddingTop:16,borderTop:'1px solid var(--border)' }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:10 }}>
+                    <Lock size={12} style={{ color:'var(--text-tertiary)' }}/>
+                    <span style={{ fontSize:11,fontWeight:700,color:'var(--text-tertiary)',textTransform:'uppercase',letterSpacing:'0.06em' }}>Login Password</span>
+                  </div>
+
+                  {editingPw ? (
+                    <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newPw}
+                        onChange={e=>setNewPw(e.target.value)}
+                        onKeyDown={e=>{ if(e.key==='Enter') handleSavePassword(); if(e.key==='Escape'){ setEditingPw(false); setNewPw(''); }}}
+                        placeholder="New password…"
+                        style={{ flex:1,padding:'8px 12px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-block-hover)',color:'var(--text-primary)',fontSize:13,outline:'none',fontFamily:'monospace' }}
+                      />
+                      <button onClick={handleSavePassword} style={{ padding:'7px 14px',borderRadius:8,border:'none',background:'var(--accent)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0 }}>Save</button>
+                      <button onClick={()=>{ setEditingPw(false); setNewPw(''); }} style={{ padding:'7px 12px',borderRadius:8,border:'1px solid var(--border)',background:'transparent',color:'var(--text-secondary)',fontSize:12,cursor:'pointer',flexShrink:0 }}>Cancel</button>
+                    </div>
+                  ) : selected.password ? (
+                    <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                      <code style={{ flex:1,padding:'8px 12px',borderRadius:8,background:'var(--bg-block-hover)',border:'1px solid var(--border)',fontSize:13,color:'var(--text-primary)',letterSpacing:showEmpPw?'0.04em':'0.18em',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                        {showEmpPw ? selected.password : '●'.repeat(Math.min(selected.password.length, 16))}
+                      </code>
+                      <button onClick={()=>setShowEmpPw(v=>!v)} style={{ background:'none',border:'none',cursor:'pointer',color:'var(--text-tertiary)',display:'flex',padding:4,flexShrink:0 }} title={showEmpPw?'Hide':'Reveal'}>
+                        {showEmpPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                      </button>
+                      <button onClick={()=>{ setEditingPw(true); setNewPw(selected.password??''); }} style={{ padding:'7px 12px',borderRadius:8,border:'1px solid var(--border)',background:'transparent',color:'var(--text-secondary)',fontSize:12,cursor:'pointer',flexShrink:0 }}>Change</button>
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                      <span style={{ flex:1,fontSize:13,color:'var(--text-tertiary)',fontStyle:'italic' }}>
+                        Not set — employee will create one on first login.
+                      </span>
+                      <button onClick={()=>{ setEditingPw(true); setNewPw(''); }} style={{ padding:'7px 12px',borderRadius:8,border:'1px dashed var(--border)',background:'transparent',color:'var(--text-tertiary)',fontSize:12,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' }}>Set password</button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
