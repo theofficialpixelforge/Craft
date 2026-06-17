@@ -98,6 +98,16 @@ export default function App() {
     setStep('app');
   };
 
+  const handleBackToSignIn = () => {
+    localStorage.removeItem('craft_auth');
+    setStep('signin');
+    setEmail('');
+    setFirstName('');
+    setLastName('');
+    setRole(null);
+    setEmployeeId(null);
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem('craft_auth');
     setStep('signin');
@@ -110,7 +120,7 @@ export default function App() {
 
   if (step === 'signin') return <SignInPage onSignIn={handleSignIn} />;
   if (step === 'name')   return <NamePage email={email} onContinue={handleName} />;
-  if (step === 'role')   return <RolePage firstName={firstName} onContinue={handleRole} />;
+  if (step === 'role')   return <RolePage firstName={firstName} onContinue={handleRole} onBack={handleBackToSignIn} />;
 
   return (
     <AppLayout

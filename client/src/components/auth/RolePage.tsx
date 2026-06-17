@@ -7,6 +7,7 @@ interface Employee { id: string; name: string; active?: boolean; password?: stri
 interface Props {
   firstName: string;
   onContinue: (role: Role, employeeId?: string) => void;
+  onBack?: () => void;
 }
 
 const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif';
@@ -44,7 +45,7 @@ const bg = {
   },
 };
 
-export function RolePage({ firstName, onContinue }: Props) {
+export function RolePage({ firstName, onContinue, onBack }: Props) {
   const [role,       setRole]       = useState<Role | null>(null);
   const [employeeId, setEmployeeId] = useState('');
   const [phase,      setPhase]      = useState<'select' | 'password'>('select');
@@ -309,6 +310,13 @@ export function RolePage({ firstName, onContinue }: Props) {
           }}>
           Continue →
         </button>
+
+        {onBack && (
+          <button onClick={onBack}
+            style={{ display:'block',width:'100%',marginTop:14,background:'none',border:'none',color:'#6a6b8a',fontSize:13,cursor:'pointer',textAlign:'center' }}>
+            ← Not {firstName}? Use a different account
+          </button>
+        )}
       </div>
     </div>
   );
