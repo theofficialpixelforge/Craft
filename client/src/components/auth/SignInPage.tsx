@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ProviderAccountPicker, OAuthProvider } from './ProviderAccountPicker';
 
 interface Props {
   onSignIn: (email: string) => void;
@@ -57,8 +58,9 @@ function CraftLogo() {
 }
 
 export function SignInPage({ onSignIn }: Props) {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [email,    setEmail]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [picker,   setPicker]   = useState<OAuthProvider | null>(null);
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,9 +68,11 @@ export function SignInPage({ onSignIn }: Props) {
     setTimeout(() => { setLoading(false); onSignIn(email); }, 600);
   };
 
-  const handleOAuth = (_provider: string) => {
-    setLoading(true);
-    setTimeout(() => { setLoading(false); onSignIn(email); }, 500);
+  const handleOAuth = (provider: OAuthProvider) => setPicker(provider);
+
+  const handlePickerSelect = (selectedEmail: string) => {
+    setPicker(null);
+    onSignIn(selectedEmail);
   };
 
   return (
@@ -147,6 +151,14 @@ export function SignInPage({ onSignIn }: Props) {
             <span>Continue with Microsoft</span>
           </button>
         </div>
+
+        {picker && (
+          <ProviderAccountPicker
+            provider={picker}
+            onSelect={handlePickerSelect}
+            onClose={() => setPicker(null)}
+          />
+        )}
 
         {/* Footer */}
         <p className="signin-footer">
