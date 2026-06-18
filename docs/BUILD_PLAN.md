@@ -92,10 +92,108 @@ can view their own leave balance.
 
 ---
 
-## Phase 3 — Database schema foundation ⏳ Planning
+## Phase 7 — Multi-tenancy / Postgres migration 🔄 In Progress (Current Focus)
+
+**Goal:** Move off sql.js to a Postgres-backed, multi-tenant data layer with
+real org isolation, Supabase Auth, and Row Level Security. Adds the invite
+system so managers can bring their team into the app. This phase runs before
+Phases 3–6 because the team collaboration gap is the most critical missing
+feature, and building the database views on top of proper infrastructure is
+cleaner than migrating them later.
+
+See [`docs/MULTITENANCY.md`](MULTITENANCY.md) for the complete planning
+document — all nine sections (schema, migration, RLS, auth, routes, invite
+flow, testing) are written and ready for implementation in Session 2.
+
+**Locked decisions (do not relitigate):**
+- RLS at the database layer is non-negotiable. Application-only scoping on
+  sql.js was explicitly rejected.
+- Invite codes for v1. No email infrastructure.
+- One org per user in v1. Schema supports multi-org for later.
+- Managers create their org at first sign-up. Interns enter via invite code.
+- Sign-in role picker removed. Role derived from `memberships.role`.
+
+### Schema (Session 2 implementation)
+
+- [ ] Stand up Supabase project; add connection string + anon key + service
+      role key as environment variables
+- [ ] Create Postgres schema: `profiles`, `organizations`, `memberships`,
+      `invites` tables (see MULTITENANCY.md §1.1–1.2)
+- [ ] Migrate `documents`, `blocks`, `backlinks` from sql.js to Postgres with
+      `org_id` column (see MULTITENANCY.md §1.3)
+- [ ] Create new server-side tables for localStorage-only features:
+      `employees`, `leave_records`, `calendar_events`, `daily_updates`,
+      `monthly_reports` with `org_id` (see MULTITENANCY.md §1.4)
+- [ ] Enable RLS on all public schema tables; apply all policies
+      (see MULTITENANCY.md §3)
+
+### Data migration (Session 2)
+
+- [ ] Export sql.js `craft.db` to `migration_export.json`
+- [ ] Build localStorage export tool (Settings button or temp `/migrate` page)
+- [ ] Run sql.js import script → documents, blocks, backlinks into Postgres
+      under default org
+- [ ] Run localStorage import (POST /api/migrate/localStorage)
+- [ ] Verify row counts match; remove migration endpoint after use
+
+### Auth (Session 2)
+
+- [ ] Replace localStorage auth (`craft_auth`, `craft_accounts`,
+      `craft_manager_password`) with Supabase Auth
+- [ ] Create `authStore` Zustand store: `{ userId, orgId, role, userName }`
+- [ ] All role checks in components read from `authStore.role` instead of
+      `localStorage.craft_auth.role` (see MULTITENANCY.md §5.3)
+- [ ] New sign-up flow: email + password → Supabase Auth → profiles insert
+      (via trigger)
+- [ ] Manager post-signup: "Create your organization" screen → org + membership
+      created → into app
+- [ ] "I have an invite code" path on sign-in page → intern signup flow
+- [ ] Remove role picker from sign-in screen
+
+### Backend (Session 2)
+
+- [ ] Replace `server/db/database.js` (sql.js wrapper) with Supabase/pg client
+- [ ] Add auth middleware: validate Supabase JWT, attach `req.auth.{ userId, orgId, role }`
+- [ ] Add `org_id` filter to all existing routes (documents, blocks, search,
+      export) — see MULTITENANCY.md §5.1
+- [ ] Add new routes: organizations, members, invites, employees, leave-records,
+      calendar-events, daily-updates, monthly-reports — see MULTITENANCY.md §5.1
+
+### Invite UI (Session 2)
+
+- [ ] Organization Settings page (manager-only): org details, invite generation,
+      pending invites table, member list — see MULTITENANCY.md §7
+- [ ] 8-char invite code generation (`crypto.randomBytes`; uppercase
+      alphanumeric; no ambiguous chars); 7-day default expiry
+- [ ] Invite validation endpoint (`GET /api/invites/validate/:code`); all edge
+      cases handled (used, expired, revoked, wrong-org) — see MULTITENANCY.md §6.4
+- [ ] Member deactivation: membership marked inactive; data stays in org
+
+### Testing (Session 2, after implementation)
+
+- [ ] Execute all 14 test cases from MULTITENANCY.md §9
+- [ ] Verify RLS bypass tests (T7, T8): anon key returns 0 rows; cross-org JWT
+      returns 0 rows
+
+**Done when:** All data lives in Postgres, every row carries `org_id`, RLS
+prevents cross-org reads and writes (verified by test cases), Supabase Auth
+replaces localStorage auth, a manager can create an org and invite interns
+via code, and all existing features (editor, calendar, leave tracker, profiles)
+work unchanged for an authenticated user inside their org.
+
+---
+
+## Phase 3 — Database schema foundation ⏳ Planned (post-Phase 7)
 
 **Goal:** Land all schema and type changes that Phases 4–6 depend on. No new UI.
 This phase is purely additive — existing features must not break.
+
+> **Note:** Phase 3 was originally planned before Phase 7. Since Phase 7 runs
+> first, Phase 3 will be built directly on Postgres (not sql.js). The SQLite
+> DDL in `docs/DATABASES.md` is a design reference only; all types must be
+> translated to Postgres (UUID ids, TIMESTAMPTZ timestamps, JSONB for JSON
+> columns, BOOLEAN for boolean flags). All Phase 3 tables get `org_id` from
+> day one — no migration needed. See `docs/MULTITENANCY.md` §1.5 and §2.2.
 
 See [`docs/DATABASES.md`](DATABASES.md) for the data model rationale.
 
@@ -300,38 +398,9 @@ and all computed values update correctly when source values change.
 
 ---
 
-## Phase 7 — Multi-tenancy / Postgres migration ⏳ Planned
-
-**Goal:** Move off sql.js to a Postgres-backed, multi-tenant data layer so that
-every subsequent phase (Notion import, billing, anything org-scoped) has real
-`org_id` scoping and real auth to build on. This is an infrastructure phase —
-it touches every table and every route, but adds no user-facing features by
-itself.
-
-See [`docs/DATABASES.md`](DATABASES.md) § Org scoping for the original
-discussion of why this was deferred until now.
-
-- [ ] Stand up a Postgres instance (Supabase-managed Postgres is the assumed
-      target); connection config via env vars
-- [ ] Add a `users` table; replace localStorage-only auth with session/JWT auth
-- [ ] Add an `orgs` (workspaces) table and an `org_members` table
-      (`user_id`, `org_id`, `role`)
-- [ ] Add `org_id` to `documents`, `blocks`, `backlinks`, `databases`,
-      `db_properties`, `db_property_values`, `db_views`
-- [ ] Migration script: port existing sql.js data into Postgres under a single
-      default org
-- [ ] Enable Row-Level Security policies scoped by `org_id` on every table
-- [ ] Replace `server/db/database.js` with a Postgres client (e.g. `pg`),
-      preserving the existing query-shape conventions where practical
-- [ ] Update every route to read/write `org_id` from the authenticated session
-- [ ] Org switcher UI for users belonging to multiple orgs
-- [ ] Bulk-insert path (or `import_mode` flag on the normal insert path) that
-      accepts explicit `created_at`/`updated_at` timestamps, for Phase 8's
-      Notion CSV "Created time"/"Last edited time" mapping
-
-**Done when:** All data lives in Postgres, every row carries an `org_id`, RLS
-prevents cross-org reads and writes, and every existing feature (editor,
-calendar, databases) works unchanged for an authenticated user inside their org.
+<!-- Phase 7 full spec is at the TOP of this file (moved to current focus).
+     This placeholder exists only to preserve section numbering.
+     The detailed checklist above supersedes the bullet list that was here. -->
 
 ---
 

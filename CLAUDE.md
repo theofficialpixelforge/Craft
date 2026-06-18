@@ -26,7 +26,8 @@ cd craft-clone && npm run dev
 |-------|-----------|
 | Frontend | React 18 + TypeScript, Vite, Tailwind (PostCSS), Zustand, @dnd-kit |
 | Backend | Node.js + Express 4 |
-| Database | sql.js — SQLite in-memory, file-persisted at `server/db/craft.db` |
+| Database | sql.js — SQLite in-memory, file-persisted at `server/db/craft.db` (Phase 7 migrates to Supabase Postgres) |
+| Auth | localStorage only today; Phase 7 migrates to Supabase Auth |
 | Icons | lucide-react |
 
 ## Current status — June 2026
@@ -50,11 +51,26 @@ yet. See [`docs/DATABASES.md`](docs/DATABASES.md) for the data model design and
 all resolved decisions. See [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for all
 phases.
 
-**Phases 7–10 (planning):** Multi-tenancy/Postgres migration, then Notion
-import (zip-based structural import, AI categorization with mandatory review,
-and a later API/OAuth + re-sync path). No application code written yet. See
-[`docs/NOTION_IMPORT.md`](docs/NOTION_IMPORT.md) and
-[`docs/AI_PLACEMENT.md`](docs/AI_PLACEMENT.md).
+**Phase 7 (🔄 In Progress):** Multi-tenancy + Postgres migration. Planning
+complete — see [`docs/MULTITENANCY.md`](docs/MULTITENANCY.md). No application
+code written yet; Session 2 begins implementation. Five decisions are locked
+(see MULTITENANCY.md §0):
+- Multi-tenancy and Postgres happen in the same phase. RLS is non-negotiable.
+- Invite flow uses invite codes for v1 (no email infrastructure).
+- One org per user in v1; memberships table supports multi-org for later.
+- Managers create their org at first sign-up; interns enter via invite code.
+- Sign-in role picker is removed; role comes from `memberships.role`.
+
+**Phases 8–10 (planning):** Notion import (zip-based structural import, AI
+categorization with mandatory review, and a later API/OAuth + re-sync path).
+Blocked on Phase 7 completing. See [`docs/NOTION_IMPORT.md`](docs/NOTION_IMPORT.md)
+and [`docs/AI_PLACEMENT.md`](docs/AI_PLACEMENT.md).
+
+**Phases 3–6 (deferred):** Database schema foundation through power tools.
+These phases are planned but not implemented. Since Phase 7 runs first, all
+Phase 3–6 tables will be built on Postgres (not sql.js). The SQLite DDL in
+`docs/DATABASES.md` is a design reference only — it will be translated to
+Postgres types when Phase 3 is implemented.
 
 **Deployed:** Live on Netlify via GitHub (https://github.com/theofficialpixelforge/Craft).
 `client/_redirects` handles SPA routing.
@@ -84,8 +100,9 @@ and a later API/OAuth + re-sync path). No application code written yet. See
   `client/src/utils/inlineNodes.ts` client-side.
 - **DB persistence:** sql.js exports the in-memory DB to disk 200 ms after any
   write. The file is read back on server start.
-- **Auth:** localStorage only (`craft_auth` key). No server-side sessions or
-  JWTs. Multi-tenancy is not implemented — see DATABASES.md open questions.
+- **Auth:** localStorage only (`craft_auth` key) today. No server-side sessions
+  or JWTs yet. Phase 7 migrates to Supabase Auth. Multi-tenancy planning is
+  complete — see [`docs/MULTITENANCY.md`](docs/MULTITENANCY.md).
 - **ID generation:** server uses the `uuid` npm package (`v4`); client also uses
   `uuid` for optimistic block IDs.
 - **Error handling:** API errors surface as thrown `Error` objects. Stores catch
@@ -98,11 +115,11 @@ and a later API/OAuth + re-sync path). No application code written yet. See
 |-------|-------|--------|
 | 1 | Core block editor, documents, navigation | ✅ Done |
 | 2 | Calendar, assistant, settings, themes | ✅ Done |
-| 3 | Database schema foundation (no UI) | 🔄 Planning |
-| 4 | Database MVP: properties + table view + filter/sort/group | ⏳ Planned |
-| 5 | Additional database views: board, calendar, timeline, gallery, list | ⏳ Planned |
-| 6 | Database power tools: relations, rollups, formulas | ⏳ Planned |
-| 7 | Multi-tenancy / Postgres migration (org_id, auth, RLS) | ⏳ Planned |
-| 8 | Notion import: zip-based, structural placement | ⏳ Planned |
-| 9 | Notion import: AI categorization + review UI | ⏳ Planned |
-| 10 | Notion import: API/OAuth + re-sync | ⏳ Planned |
+| 7 | Multi-tenancy / Postgres migration (org_id, Supabase Auth, RLS, invites) | 🔄 In Progress |
+| 3 | Database schema foundation (no UI) — will build on Postgres | ⏳ Planned (post-7) |
+| 4 | Database MVP: properties + table view + filter/sort/group | ⏳ Planned (post-7) |
+| 5 | Additional database views: board, calendar, timeline, gallery, list | ⏳ Planned (post-7) |
+| 6 | Database power tools: relations, rollups, formulas | ⏳ Planned (post-7) |
+| 8 | Notion import: zip-based, structural placement | ⏳ Planned (post-7) |
+| 9 | Notion import: AI categorization + review UI | ⏳ Planned (post-7) |
+| 10 | Notion import: API/OAuth + re-sync | ⏳ Planned (post-7) |
