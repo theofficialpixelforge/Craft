@@ -51,10 +51,17 @@ yet. See [`docs/DATABASES.md`](docs/DATABASES.md) for the data model design and
 all resolved decisions. See [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for all
 phases.
 
-**Phase 7 (🔄 In Progress):** Multi-tenancy + Postgres migration. Planning
-complete — see [`docs/MULTITENANCY.md`](docs/MULTITENANCY.md). No application
-code written yet; Session 2 begins implementation. Five decisions are locked
-(see MULTITENANCY.md §0):
+**Phase 7 (🔄 In Progress):** Multi-tenancy + Postgres migration.
+**Session 2a complete (2026-06-18):** All 16 Postgres tables created in Supabase
+(`profiles`, `organizations`, `memberships`, `invites`, `documents`, `blocks`,
+`backlinks`, `employees`, `leave_records`, `calendar_events`, `daily_updates`,
+`monthly_reports`, `databases`, `db_properties`, `db_property_values`,
+`db_views`). RLS enabled on every table with all policies applied and verified.
+The live app is still running on sql.js and localStorage auth — no cutover yet.
+**Session 2b is next:** Express cutover to Supabase, data migration from sql.js
+and localStorage, Supabase Auth, and the invite UI.
+See [`docs/MULTITENANCY.md`](docs/MULTITENANCY.md) for the full spec. Five
+decisions are locked (see MULTITENANCY.md §0):
 - Multi-tenancy and Postgres happen in the same phase. RLS is non-negotiable.
 - Invite flow uses invite codes for v1 (no email infrastructure).
 - One org per user in v1; memberships table supports multi-org for later.

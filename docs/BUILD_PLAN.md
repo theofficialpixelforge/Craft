@@ -113,21 +113,29 @@ flow, testing) are written and ready for implementation in Session 2.
 - Managers create their org at first sign-up. Interns enter via invite code.
 - Sign-in role picker removed. Role derived from `memberships.role`.
 
-### Schema (Session 2 implementation)
+### Session 2a — Schema foundation ✅ Complete (2026-06-18)
 
-- [ ] Stand up Supabase project; add connection string + anon key + service
+All 16 tables created in Supabase Postgres; RLS enabled on every table with
+all policies applied. Verified via `pg_tables` query (all 16 rows show
+`rowsecurity = true`). Live app is still on sql.js and localStorage auth.
+Migration files: `server/migrations/001_initial_schema.sql` and
+`server/migrations/002_rls_policies.sql`.
+
+- [x] Stand up Supabase project; add connection string + anon key + service
       role key as environment variables
-- [ ] Create Postgres schema: `profiles`, `organizations`, `memberships`,
+- [x] Create Postgres schema: `profiles`, `organizations`, `memberships`,
       `invites` tables (see MULTITENANCY.md §1.1–1.2)
-- [ ] Migrate `documents`, `blocks`, `backlinks` from sql.js to Postgres with
-      `org_id` column (see MULTITENANCY.md §1.3)
-- [ ] Create new server-side tables for localStorage-only features:
+- [x] Create Postgres tables for `documents`, `blocks`, `backlinks` with
+      `org_id` column (see MULTITENANCY.md §1.3) — schema only; data migration is Session 2b
+- [x] Create new server-side tables for localStorage-only features:
       `employees`, `leave_records`, `calendar_events`, `daily_updates`,
       `monthly_reports` with `org_id` (see MULTITENANCY.md §1.4)
-- [ ] Enable RLS on all public schema tables; apply all policies
+- [x] Enable RLS on all public schema tables; apply all policies
       (see MULTITENANCY.md §3)
 
-### Data migration (Session 2)
+### Session 2b — Cutover ⏳ Next
+
+### Data migration (Session 2b)
 
 - [ ] Export sql.js `craft.db` to `migration_export.json`
 - [ ] Build localStorage export tool (Settings button or temp `/migrate` page)
@@ -136,7 +144,7 @@ flow, testing) are written and ready for implementation in Session 2.
 - [ ] Run localStorage import (POST /api/migrate/localStorage)
 - [ ] Verify row counts match; remove migration endpoint after use
 
-### Auth (Session 2)
+### Auth (Session 2b)
 
 - [ ] Replace localStorage auth (`craft_auth`, `craft_accounts`,
       `craft_manager_password`) with Supabase Auth
@@ -150,7 +158,7 @@ flow, testing) are written and ready for implementation in Session 2.
 - [ ] "I have an invite code" path on sign-in page → intern signup flow
 - [ ] Remove role picker from sign-in screen
 
-### Backend (Session 2)
+### Backend (Session 2b)
 
 - [ ] Replace `server/db/database.js` (sql.js wrapper) with Supabase/pg client
 - [ ] Add auth middleware: validate Supabase JWT, attach `req.auth.{ userId, orgId, role }`
@@ -159,7 +167,7 @@ flow, testing) are written and ready for implementation in Session 2.
 - [ ] Add new routes: organizations, members, invites, employees, leave-records,
       calendar-events, daily-updates, monthly-reports — see MULTITENANCY.md §5.1
 
-### Invite UI (Session 2)
+### Invite UI (Session 2b)
 
 - [ ] Organization Settings page (manager-only): org details, invite generation,
       pending invites table, member list — see MULTITENANCY.md §7
@@ -169,7 +177,7 @@ flow, testing) are written and ready for implementation in Session 2.
       cases handled (used, expired, revoked, wrong-org) — see MULTITENANCY.md §6.4
 - [ ] Member deactivation: membership marked inactive; data stays in org
 
-### Testing (Session 2, after implementation)
+### Testing (Session 2b, after implementation)
 
 - [ ] Execute all 14 test cases from MULTITENANCY.md §9
 - [ ] Verify RLS bypass tests (T7, T8): anon key returns 0 rows; cross-org JWT
