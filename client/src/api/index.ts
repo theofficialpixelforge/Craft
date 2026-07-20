@@ -1,10 +1,19 @@
 import type { Block, BlockType, Document, InlineNode, SearchResult } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 const BASE = '/api';
 
+function getAuthHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
     ...opts,
   });
   if (!res.ok) {
@@ -78,7 +87,7 @@ export const api = {
   ): AsyncGenerator<string> {
     const res = await fetch(`${BASE}/assistant/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ messages, context }),
     });
     if (!res.ok || !res.body) throw new Error('Assistant request failed');
@@ -107,7 +116,9 @@ export const api = {
 
   // ── Export ──────────────────────────────────────────────────────────────
   exportMarkdown: async (documentId: string, title: string): Promise<{ blobUrl: string; filename: string }> => {
-    const res = await fetch(`${BASE}/documents/${documentId}/export`);
+    const res = await fetch(`${BASE}/documents/${documentId}/export`, {
+      headers: getAuthHeaders(),
+    });
     if (!res.ok) throw new Error('Export failed');
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);

@@ -5,6 +5,7 @@ import {
   Pencil, ImageIcon,
 } from 'lucide-react';
 import { applyTintedSidebar, clearTintedSidebar } from '../../store/uiStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface Props {
   onClose: () => void;
@@ -259,9 +260,9 @@ function SubscriptionsPage() {
 }
 
 function AccountPage({ onSignOut, userName }: { onSignOut: () => void; userName?: string }) {
-  const raw = (() => { try { return JSON.parse(localStorage.getItem('craft_auth') || '{}'); } catch { return {}; } })();
-  const name = raw.firstName ? `${raw.firstName}${raw.lastName ? ' ' + raw.lastName : ''}` : (userName || 'User');
-  const email = raw.email || '';
+  const { userName: storeUserName, session } = useAuthStore();
+  const name = storeUserName || userName || 'User';
+  const email = session?.user.email || '';
 
   return (
     <div>
@@ -974,9 +975,9 @@ const PAGE_TITLES: Record<Page, string> = {
 export function SettingsModal({ onClose, onSignOut, userName }: Props) {
   const [page, setPage] = useState<Page>('account');
 
-  const raw = (() => { try { return JSON.parse(localStorage.getItem('craft_auth') || '{}'); } catch { return {}; } })();
-  const name = raw.firstName ? `${raw.firstName}${raw.lastName ? ' ' + raw.lastName : ''}` : (userName || 'User');
-  const email = raw.email || '';
+  const { userName: storeUserName, session } = useAuthStore();
+  const name = storeUserName || userName || 'User';
+  const email = session?.user.email || '';
 
   function renderPage() {
     switch (page) {

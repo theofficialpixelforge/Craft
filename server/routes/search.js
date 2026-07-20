@@ -1,36 +1,53 @@
+'use strict';
+
 const express = require('express');
-const { getDB } = require('../db/database');
+const { supabaseAdmin } = require('../supabase');
 
 const router = express.Router();
 
 // GET /api/search?q=<query>&limit=20
-router.get('/', (req, res) => {
-  const { prepare } = getDB();
+router.get('/', async (req, res) => {
   const q = (req.query.q || '').trim();
   const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-
   if (!q) return res.json([]);
 
-  const likeQ = `%${q}%`;
+  const orgId = req.auth.orgId;
 
-  // Search document titles
-  const titleRows = prepare(`
-    SELECT id, title, emoji FROM documents
-    WHERE title LIKE ? AND is_deleted = 0
-    LIMIT ?
-  `).all(likeQ, 10);
+  const [titleResult, blockResult] = await Promise.all([
+    supabaseAdmin
+      .from('documents')
+      .select('id, title, emoji')
+      .eq('org_id', orgId)
+      .eq('is_deleted', false)
+      .ilike('title', `%${q}%`)
+      .limit(10),
+    supabaseAdmin
+      .from('blocks')
+      .select('id, document_id, content')
+      .eq('org_id', orgId)
+      .filter('content::text', 'ilike', `%${q}%`)
+      .limit(limit),
+  ]);
 
-  // Search block content
-  const blockRows = prepare(`
-    SELECT b.id as block_id, b.content as block_content, b.document_id,
-           d.title as document_title, d.emoji as document_emoji
-    FROM blocks b
-    JOIN documents d ON d.id = b.document_id
-    WHERE b.content LIKE ? AND d.is_deleted = 0
-    LIMIT ?
-  `).all(likeQ, limit);
+  const titleDocs = titleResult.data || [];
+  const blockRows = blockResult.data || [];
+  const seenDocIds = new Set(titleDocs.map(d => d.id));
 
-  const titleResults = titleRows.map(d => ({
+  const blockDocIds = [...new Set(
+    blockRows.map(b => b.document_id).filter(id => !seenDocIds.has(id)),
+  )];
+
+  let blockDocMap = {};
+  if (blockDocIds.length > 0) {
+    const { data: blockDocs } = await supabaseAdmin
+      .from('documents')
+      .select('id, title, emoji')
+      .in('id', blockDocIds)
+      .eq('is_deleted', false);
+    for (const d of blockDocs || []) blockDocMap[d.id] = d;
+  }
+
+  const titleResults = titleDocs.map(d => ({
     document_id: d.id,
     document_title: d.title,
     document_emoji: d.emoji,
@@ -39,27 +56,23 @@ router.get('/', (req, res) => {
     is_title_match: true,
   }));
 
-  const seenDocs = new Set(titleResults.map(r => r.document_id));
-
+  const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const blockResults = blockRows
-    .filter(r => !seenDocs.has(r.document_id))
+    .filter(r => !seenDocIds.has(r.document_id) && blockDocMap[r.document_id])
     .map(r => {
-      let plainText = '';
-      try {
-        const nodes = JSON.parse(r.block_content);
-        plainText = extractText(nodes);
-      } catch {
-        plainText = r.block_content;
-      }
+      const doc = blockDocMap[r.document_id];
+      const plainText = extractText(Array.isArray(r.content) ? r.content : []);
       const idx = plainText.toLowerCase().indexOf(q.toLowerCase());
       const start = Math.max(0, idx - 30);
-      const snippet = (start > 0 ? '...' : '') + plainText.slice(start, start + 80) + (start + 80 < plainText.length ? '...' : '');
+      const snippet = (start > 0 ? '...' : '') +
+        plainText.slice(start, start + 80) +
+        (start + 80 < plainText.length ? '...' : '');
       return {
         document_id: r.document_id,
-        document_title: r.document_title,
-        document_emoji: r.document_emoji,
-        block_id: r.block_id,
-        snippet: snippet.replace(new RegExp(q, 'gi'), `<mark>$&</mark>`),
+        document_title: doc.title,
+        document_emoji: doc.emoji,
+        block_id: r.id,
+        snippet: snippet.replace(new RegExp(safeQ, 'gi'), '<mark>$&</mark>'),
         is_title_match: false,
       };
     });

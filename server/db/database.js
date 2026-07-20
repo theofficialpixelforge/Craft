@@ -1,3 +1,5 @@
+// DEPRECATED — Phase 7 (Session 2b): App now uses Supabase Postgres.
+// Do NOT delete — kept for rollback safety. Do NOT import from server/index.js.
 const path = require('path');
 const fs = require('fs');
 

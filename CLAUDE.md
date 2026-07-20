@@ -53,13 +53,13 @@ phases.
 
 **Phase 7 (🔄 In Progress):** Multi-tenancy + Postgres migration.
 **Session 2a complete (2026-06-18):** All 16 Postgres tables created in Supabase
-(`profiles`, `organizations`, `memberships`, `invites`, `documents`, `blocks`,
-`backlinks`, `employees`, `leave_records`, `calendar_events`, `daily_updates`,
-`monthly_reports`, `databases`, `db_properties`, `db_property_values`,
-`db_views`). RLS enabled on every table with all policies applied and verified.
-The live app is still running on sql.js and localStorage auth — no cutover yet.
-**Session 2b is next:** Express cutover to Supabase, data migration from sql.js
-and localStorage, Supabase Auth, and the invite UI.
+with RLS on every table.
+**Session 2b complete (2026-07-14):** Full cutover to Supabase Postgres and
+Supabase Auth. sql.js and localStorage auth removed from startup path (files
+kept for rollback). New auth flow: sign up → create org → app. All Express
+routes now require JWT and scope queries by `org_id`.
+**Session 2c is next:** Invite code generation, invite validation, and the
+Organization Settings page so managers can bring interns into their org.
 See [`docs/MULTITENANCY.md`](docs/MULTITENANCY.md) for the full spec. Five
 decisions are locked (see MULTITENANCY.md §0):
 - Multi-tenancy and Postgres happen in the same phase. RLS is non-negotiable.

@@ -1,3 +1,5 @@
+// DEPRECATED — Phase 7 (Session 2b): Seed data is Craft-branded placeholder content
+// and must NOT run against Postgres. Kept for rollback safety only.
 const { v4: uuidv4 } = require('uuid');
 
 function txt(v) { return JSON.stringify([{ t: 'text', v }]); }

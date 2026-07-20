@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuthStore } from '../../store/authStore';
 import {
   Plus, Inbox, SlidersHorizontal, Calendar,
   CalendarDays, ListChecks, X, Trash2,
@@ -18,10 +19,7 @@ interface Task {
 }
 
 function currentUserKey(): string {
-  try {
-    const auth = JSON.parse(localStorage.getItem('craft_auth') ?? '{}');
-    return (auth.employeeId || auth.email || 'shared') as string;
-  } catch { return 'shared'; }
+  return useAuthStore.getState().userId || 'shared';
 }
 
 function loadTasksFromKey(key: string): Task[] {

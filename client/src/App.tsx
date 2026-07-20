@@ -1,143 +1,111 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { AppLayout } from './components/layout/AppLayout';
 import { SignInPage } from './components/auth/SignInPage';
-import { NamePage } from './components/auth/NamePage';
-import { RolePage } from './components/auth/RolePage';
-import type { Role } from './components/auth/RolePage';
+import { SignUpPage } from './components/auth/SignUpPage';
+import { CreateOrgPage } from './components/auth/CreateOrgPage';
+import { InviteStubPage } from './components/auth/InviteStubPage';
+import { supabase } from './lib/supabase';
+import { useAuthStore } from './store/authStore';
 
-type AuthStep = 'signin' | 'name' | 'role' | 'app';
-
-interface AuthData {
-  step: AuthStep;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: Role | null;
-  employeeId: string | null;
-}
-
-// ── Saved accounts (email → name) ─────────────────────────────────────────────
-
-const SK_ACCOUNTS = 'craft_accounts';
-interface SavedAccount { email: string; firstName: string; lastName: string; }
-
-function findAccount(email: string): SavedAccount | null {
-  try {
-    const list: SavedAccount[] = JSON.parse(localStorage.getItem(SK_ACCOUNTS) ?? '[]');
-    return list.find(a => a.email.toLowerCase() === email.toLowerCase()) ?? null;
-  } catch { return null; }
-}
-
-function upsertAccount(email: string, firstName: string, lastName: string) {
-  try {
-    const list: SavedAccount[] = JSON.parse(localStorage.getItem(SK_ACCOUNTS) ?? '[]');
-    const idx = list.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
-    if (idx >= 0) list[idx] = { email, firstName, lastName };
-    else list.push({ email, firstName, lastName });
-    localStorage.setItem(SK_ACCOUNTS, JSON.stringify(list));
-  } catch {}
-}
-
-// ── Session restore ───────────────────────────────────────────────────────────
-
-function loadAuthState(): AuthData {
-  try {
-    const raw = localStorage.getItem('craft_auth');
-    if (raw) {
-      const data = JSON.parse(raw);
-      if (data.firstName && data.role) return { step: 'app',    ...data };
-      if (data.firstName)              return { step: 'role',   ...data, role: null, employeeId: null };
-      if (data.email)                  return { step: 'name',   ...data, firstName: '', lastName: '', role: null, employeeId: null };
-    }
-  } catch {}
-  return { step: 'signin', email: '', firstName: '', lastName: '', role: null, employeeId: null };
-}
+type Screen = 'loading' | 'signin' | 'signup' | 'create-org' | 'invite-stub' | 'app';
 
 export default function App() {
-  const initial = loadAuthState();
-  const [step,       setStep]       = useState<AuthStep>(initial.step);
-  const [email,      setEmail]      = useState(initial.email);
-  const [firstName,  setFirstName]  = useState(initial.firstName);
-  const [lastName,   setLastName]   = useState(initial.lastName);
-  const [role,       setRole]       = useState<Role | null>(initial.role);
-  const [employeeId, setEmployeeId] = useState<string | null>(initial.employeeId);
+  const { setSession, setProfile, setLoading, clear, role, userName, session } = useAuthStore();
+  const [screen, setScreen] = useState<Screen>('loading');
 
-  const handleSignIn = (signedInEmail: string, googleProfile?: { firstName?: string; lastName?: string }) => {
-    const e = signedInEmail || email;
-    const saved = findAccount(e);
-    if (saved) {
-      // Returning user — skip the name step entirely
-      setEmail(e);
-      setFirstName(saved.firstName);
-      setLastName(saved.lastName);
-      localStorage.setItem('craft_auth', JSON.stringify({ email: e, firstName: saved.firstName, lastName: saved.lastName }));
-      setStep('role');
-    } else if (googleProfile?.firstName) {
-      // New user via Google — use their Google profile name, skip name page
-      const first = googleProfile.firstName;
-      const last  = googleProfile.lastName ?? '';
-      setEmail(e);
-      setFirstName(first);
-      setLastName(last);
-      localStorage.setItem('craft_auth', JSON.stringify({ email: e, firstName: first, lastName: last }));
-      upsertAccount(e, first, last);
-      setStep('role');
-    } else {
-      localStorage.setItem('craft_auth', JSON.stringify({ email: e }));
-      setEmail(e);
-      setStep('name');
+  async function loadProfile(s: Session) {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/me', {
+        headers: { Authorization: `Bearer ${s.access_token}` },
+      });
+      if (!res.ok) throw new Error('Profile load failed');
+      const data = await res.json();
+      setProfile(data);
+      setScreen(data.orgId ? 'app' : 'create-org');
+    } catch {
+      await supabase.auth.signOut();
+      clear();
+      setScreen('signin');
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (s) {
+        setSession(s);
+        loadProfile(s);
+      } else {
+        setLoading(false);
+        setScreen('signin');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (s) setSession(s);
+      if (event === 'SIGNED_OUT') { clear(); setScreen('signin'); }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    clear();
+    setScreen('signin');
   };
 
-  const handleName = (first: string, last: string) => {
-    setFirstName(first);
-    setLastName(last);
-    localStorage.setItem('craft_auth', JSON.stringify({ email, firstName: first, lastName: last }));
-    upsertAccount(email, first, last);
-    setStep('role');
-  };
+  if (screen === 'loading') return <LoadingScreen />;
 
-  const handleRole = (selectedRole: Role, selectedEmployeeId?: string) => {
-    setRole(selectedRole);
-    setEmployeeId(selectedEmployeeId ?? null);
-    localStorage.setItem('craft_auth', JSON.stringify({
-      email, firstName, lastName,
-      role: selectedRole,
-      employeeId: selectedEmployeeId ?? null,
-    }));
-    setStep('app');
-  };
+  if (screen === 'signin') return (
+    <SignInPage
+      onSignIn={async (s) => { setSession(s); await loadProfile(s); }}
+      onSignUp={() => setScreen('signup')}
+      onInviteCode={() => setScreen('invite-stub')}
+    />
+  );
 
-  const handleBackToSignIn = () => {
-    localStorage.removeItem('craft_auth');
-    setStep('signin');
-    setEmail('');
-    setFirstName('');
-    setLastName('');
-    setRole(null);
-    setEmployeeId(null);
-  };
+  if (screen === 'signup') return (
+    <SignUpPage
+      onSuccess={async (s) => { setSession(s); await loadProfile(s); }}
+      onBack={() => setScreen('signin')}
+    />
+  );
 
-  const handleSignOut = () => {
-    localStorage.removeItem('craft_auth');
-    setStep('signin');
-    setEmail('');
-    setFirstName('');
-    setLastName('');
-    setRole(null);
-    setEmployeeId(null);
-  };
+  if (screen === 'create-org') return (
+    <CreateOrgPage onSuccess={() => setScreen('app')} />
+  );
 
-  if (step === 'signin') return <SignInPage onSignIn={handleSignIn} />;
-  if (step === 'name')   return <NamePage email={email} onContinue={handleName} />;
-  if (step === 'role')   return <RolePage firstName={firstName} onContinue={handleRole} onBack={handleBackToSignIn} />;
+  if (screen === 'invite-stub') return (
+    <InviteStubPage onBack={() => setScreen('signin')} />
+  );
 
   return (
     <AppLayout
-      userName={firstName}
-      role={role ?? 'manager'}
-      employeeId={employeeId ?? undefined}
+      userName={userName ?? undefined}
+      role={(role ?? 'manager') as 'manager' | 'intern'}
       onSignOut={handleSignOut}
     />
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0f1035 0%, #1a1550 35%, #2d1b69 65%, #1a1040 100%)',
+    }}>
+      <div style={{
+        width: 32, height: 32,
+        border: '3px solid rgba(255,255,255,0.2)',
+        borderTopColor: 'white',
+        borderRadius: '50%',
+        animation: 'ls-spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes ls-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 }

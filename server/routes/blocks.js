@@ -1,23 +1,47 @@
+'use strict';
+
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { getDB } = require('../db/database');
+const { supabaseAdmin } = require('../supabase');
 
 const router = express.Router({ mergeParams: true });
 
+// Supabase returns JSONB as parsed objects; normalizeBlock keeps the shape the client expects.
+function normalizeBlock(b) {
+  if (!b) return null;
+  return {
+    ...b,
+    content: b.content ?? [],
+    checked: b.checked ?? null,
+    indent: Number(b.indent) || 0,
+    position: Number(b.position) || 0,
+  };
+}
+
+function parseJson(v, fallback) {
+  if (v === null || v === undefined) return fallback;
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return fallback; } }
+  return v;
+}
+
 // GET /api/documents/:id/blocks
-router.get('/', (req, res) => {
-  const { prepare } = getDB();
-  const blocks = prepare(`SELECT * FROM blocks WHERE document_id = ? ORDER BY position`).all(req.params.id);
-  res.json(blocks.map(normalizeBlock));
+router.get('/', async (req, res) => {
+  const { data: blocks, error } = await supabaseAdmin
+    .from('blocks')
+    .select('*')
+    .eq('document_id', req.params.id)
+    .eq('org_id', req.auth.orgId)
+    .order('position');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json((blocks || []).map(normalizeBlock));
 });
 
 // POST /api/documents/:id/blocks
-router.post('/', (req, res) => {
-  const { prepare } = getDB();
+router.post('/', async (req, res) => {
   const docId = req.params.id;
   const {
     type = 'text',
-    content = '[]',
+    content = [],
     position,
     indent = 0,
     checked = null,
@@ -32,87 +56,96 @@ router.post('/', (req, res) => {
 
   let pos = position;
   if (pos === undefined || pos === null) {
-    const max = prepare(`SELECT MAX(position) as mp FROM blocks WHERE document_id = ?`).get(docId);
-    pos = ((max?.mp) ?? 0) + 1;
+    const { data: posRows } = await supabaseAdmin
+      .from('blocks')
+      .select('position')
+      .eq('document_id', docId)
+      .eq('org_id', req.auth.orgId)
+      .order('position', { ascending: false })
+      .limit(1);
+    pos = (posRows?.[0]?.position ?? 0) + 1;
   }
 
   const id = uuidv4();
-  const contentStr     = typeof content      === 'string' ? content      : JSON.stringify(content);
-  const tableDataStr   = typeof table_data   === 'string' ? table_data   : table_data   ? JSON.stringify(table_data)   : null;
-  const columnsDataStr = typeof columns_data === 'string' ? columns_data : columns_data ? JSON.stringify(columns_data) : null;
-
-  prepare(`
-    INSERT INTO blocks (id, document_id, type, content, indent, position, checked, language, callout_icon, image_url, image_caption, linked_doc_id, table_data, columns_data)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, docId, type, contentStr, indent, pos, checked, language, callout_icon, image_url, image_caption, linked_doc_id, tableDataStr, columnsDataStr);
-
-  const block = prepare(`SELECT * FROM blocks WHERE id = ?`).get(id);
+  const { data: block, error } = await supabaseAdmin
+    .from('blocks')
+    .insert({
+      id,
+      org_id: req.auth.orgId,
+      document_id: docId,
+      type,
+      content: parseJson(content, []),
+      indent,
+      position: pos,
+      checked,
+      language,
+      callout_icon,
+      image_url,
+      image_caption,
+      linked_doc_id,
+      table_data: parseJson(table_data, null),
+      columns_data: parseJson(columns_data, null),
+    })
+    .select('*')
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(normalizeBlock(block));
 });
 
 // PATCH /api/blocks/:blockId
-router.patch('/:blockId', (req, res) => {
-  const { prepare } = getDB();
-  const allowed = ['type', 'content', 'indent', 'position', 'checked', 'language', 'callout_icon', 'image_url', 'image_caption', 'linked_doc_id', 'table_data', 'columns_data'];
+router.patch('/:blockId', async (req, res) => {
+  const allowed = ['type', 'content', 'indent', 'position', 'checked', 'language',
+    'callout_icon', 'image_url', 'image_caption', 'linked_doc_id', 'table_data', 'columns_data'];
   const jsonFields = new Set(['content', 'table_data', 'columns_data']);
-  const updates = [];
-  const values = [];
+  const updates = {};
 
   for (const key of allowed) {
     if (key in req.body) {
-      updates.push(`${key} = ?`);
       const raw = req.body[key];
-      const val = jsonFields.has(key) && raw !== null && typeof raw !== 'string'
-        ? JSON.stringify(raw)
-        : raw;
-      values.push(val);
+      updates[key] = jsonFields.has(key) ? parseJson(raw, key === 'content' ? [] : null) : raw;
     }
   }
 
-  if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
-  updates.push(`updated_at = datetime('now')`);
-  values.push(req.params.blockId);
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No fields to update' });
 
-  prepare(`UPDATE blocks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-  const block = prepare(`SELECT * FROM blocks WHERE id = ?`).get(req.params.blockId);
-  if (!block) return res.status(404).json({ error: 'Not found' });
+  const { data: block, error } = await supabaseAdmin
+    .from('blocks')
+    .update(updates)
+    .eq('id', req.params.blockId)
+    .eq('org_id', req.auth.orgId)
+    .select('*')
+    .single();
+  if (error || !block) return res.status(404).json({ error: error?.message || 'Not found' });
   res.json(normalizeBlock(block));
 });
 
 // DELETE /api/blocks/:blockId
-router.delete('/:blockId', (req, res) => {
-  const { prepare } = getDB();
-  prepare(`DELETE FROM blocks WHERE id = ?`).run(req.params.blockId);
+router.delete('/:blockId', async (req, res) => {
+  const { error } = await supabaseAdmin
+    .from('blocks')
+    .delete()
+    .eq('id', req.params.blockId)
+    .eq('org_id', req.auth.orgId);
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 
 // POST /api/documents/:id/blocks/reorder
-router.post('/reorder', (req, res) => {
-  const { prepare, transaction } = getDB();
+router.post('/reorder', async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids must be an array' });
 
-  const update = prepare(`UPDATE blocks SET position = ?, updated_at = datetime('now') WHERE id = ?`);
-  transaction(() => {
-    ids.forEach((id, i) => update.run(i + 1, id));
-  })();
+  await Promise.all(
+    ids.map((id, i) =>
+      supabaseAdmin
+        .from('blocks')
+        .update({ position: i + 1 })
+        .eq('id', id)
+        .eq('org_id', req.auth.orgId),
+    ),
+  );
 
   res.json({ success: true });
 });
-
-function normalizeBlock(b) {
-  if (!b) return null;
-  return {
-    ...b,
-    content: (() => { try { return JSON.parse(b.content); } catch { return []; } })(),
-    checked: b.checked === null || b.checked === undefined ? null : !!b.checked,
-    indent: Number(b.indent) || 0,
-    position: Number(b.position) || 0,
-    linked_doc_id: b.linked_doc_id || null,
-    table_data:   (() => { try { return b.table_data   ? JSON.parse(b.table_data)   : null; } catch { return null; } })(),
-    columns_data: (() => { try { return b.columns_data ? JSON.parse(b.columns_data) : null; } catch { return null; } })(),
-    is_favorite: undefined,
-  };
-}
 
 module.exports = router;

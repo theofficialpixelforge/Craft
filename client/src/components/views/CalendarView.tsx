@@ -3,6 +3,7 @@ import {
   Plus, MoreHorizontal, CheckSquare, FileText,
   ChevronLeft, ChevronRight, X, MousePointer2,
 } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 import {
   loadGIS, getStoredToken, clearToken, requestNewToken, fetchGoogleEvents,
 } from '../../services/googleCalendar';
@@ -40,10 +41,7 @@ function getMonthGrid(year: number, month: number): Date[] {
 function newId() { return `ev-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
 
 function currentUserKey(): string {
-  try {
-    const auth = JSON.parse(localStorage.getItem('craft_auth') ?? '{}');
-    return (auth.employeeId || auth.email || 'shared') as string;
-  } catch { return 'shared'; }
+  return useAuthStore.getState().userId || 'shared';
 }
 
 function loadEvents(key: string): CalendarEvent[] {

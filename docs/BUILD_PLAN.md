@@ -133,61 +133,56 @@ Migration files: `server/migrations/001_initial_schema.sql` and
 - [x] Enable RLS on all public schema tables; apply all policies
       (see MULTITENANCY.md §3)
 
-### Session 2b — Cutover ⏳ Next
+### Session 2b — Cutover ✅ Complete (2026-07-14)
 
-### Data migration (Session 2b)
+**Clean cutover, no data migration.** `craft.db` contained only Craft-branded
+placeholder content; localStorage had no user data worth keeping. Both were left
+in place for rollback safety but are no longer in the startup path.
 
-- [ ] Export sql.js `craft.db` to `migration_export.json`
-- [ ] Build localStorage export tool (Settings button or temp `/migrate` page)
-- [ ] Run sql.js import script → documents, blocks, backlinks into Postgres
-      under default org
-- [ ] Run localStorage import (POST /api/migrate/localStorage)
-- [ ] Verify row counts match; remove migration endpoint after use
+**What shipped:**
+- `server/middleware/auth.js` — Supabase JWT validation; attaches `req.auth.{userId, orgId, role, userName}`
+- `server/routes/organizations.js` — POST (create org + manager membership), GET /current
+- `GET /api/me` — returns current user's `{userId, orgId, role, userName}`
+- All route files (`documents`, `blocks`, `search`, `export`) rewritten to use
+  Supabase client with `org_id` scoping on every query
+- `server/db/database.js` and `server/db/seed.js` — DEPRECATED comments added;
+  files kept for rollback; NOT in startup path
+- `client/src/lib/supabase.ts` — Supabase browser client
+- `client/src/store/authStore.ts` — Zustand store: `{session, userId, orgId, role, userName}`
+- `client/src/App.tsx` — session-based state machine (loading → signin → signup → create-org → app)
+- `client/src/components/auth/AuthCard.tsx` — shared dark-card + star-field layout
+- `client/src/components/auth/SignInPage.tsx` — email + password sign-in
+- `client/src/components/auth/SignUpPage.tsx` — email + password + name sign-up
+- `client/src/components/auth/CreateOrgPage.tsx` — org name → POST /api/organizations
+- `client/src/components/auth/InviteStubPage.tsx` — invite code stub ("coming soon")
+- `client/src/api/index.ts` — all requests now send `Authorization: Bearer <token>`
+- `SettingsModal`, `TasksView`, `CalendarView` — `craft_auth` localStorage refs removed
+- `NamePage.tsx` and `RolePage.tsx` deleted (role picker removed; role from `memberships`)
+- `client/src/vite-env.d.ts` — added for `import.meta.env` TypeScript support
+- `.env.example` — updated with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 
-### Auth (Session 2b)
+**Checklist:**
+- [x] No `craft_auth` references remain in client src
+- [x] TypeScript compiles clean (`tsc --noEmit` passes with 0 errors)
+- [x] sql.js and `seedIfEmpty` removed from server startup path
+- [x] All Express routes require valid Supabase JWT (except `/api/assistant`)
+- [x] All document/block queries carry `org_id` scope
+- [x] Manager can sign up, create org, land in app (requires `.env` with Supabase keys)
 
-- [ ] Replace localStorage auth (`craft_auth`, `craft_accounts`,
-      `craft_manager_password`) with Supabase Auth
-- [ ] Create `authStore` Zustand store: `{ userId, orgId, role, userName }`
-- [ ] All role checks in components read from `authStore.role` instead of
-      `localStorage.craft_auth.role` (see MULTITENANCY.md §5.3)
-- [ ] New sign-up flow: email + password → Supabase Auth → profiles insert
-      (via trigger)
-- [ ] Manager post-signup: "Create your organization" screen → org + membership
-      created → into app
-- [ ] "I have an invite code" path on sign-in page → intern signup flow
-- [ ] Remove role picker from sign-in screen
+**Not in scope (moved to Session 2c):**
+- Invite code generation and validation
+- Organization Settings page / member list
+- Full MULTITENANCY.md §9 test suite execution
+- Remaining Phase 7 new routes (employees, leave-records, calendar-events, etc.)
 
-### Backend (Session 2b)
-
-- [ ] Replace `server/db/database.js` (sql.js wrapper) with Supabase/pg client
-- [ ] Add auth middleware: validate Supabase JWT, attach `req.auth.{ userId, orgId, role }`
-- [ ] Add `org_id` filter to all existing routes (documents, blocks, search,
-      export) — see MULTITENANCY.md §5.1
-- [ ] Add new routes: organizations, members, invites, employees, leave-records,
-      calendar-events, daily-updates, monthly-reports — see MULTITENANCY.md §5.1
-
-### Invite UI (Session 2b)
+### Session 2c — Invite UI ⏳ Next
 
 - [ ] Organization Settings page (manager-only): org details, invite generation,
       pending invites table, member list — see MULTITENANCY.md §7
-- [ ] 8-char invite code generation (`crypto.randomBytes`; uppercase
-      alphanumeric; no ambiguous chars); 7-day default expiry
-- [ ] Invite validation endpoint (`GET /api/invites/validate/:code`); all edge
-      cases handled (used, expired, revoked, wrong-org) — see MULTITENANCY.md §6.4
+- [ ] 8-char invite code generation; 7-day default expiry
+- [ ] Invite validation endpoint; intern signup via code → membership created
 - [ ] Member deactivation: membership marked inactive; data stays in org
-
-### Testing (Session 2b, after implementation)
-
 - [ ] Execute all 14 test cases from MULTITENANCY.md §9
-- [ ] Verify RLS bypass tests (T7, T8): anon key returns 0 rows; cross-org JWT
-      returns 0 rows
-
-**Done when:** All data lives in Postgres, every row carries `org_id`, RLS
-prevents cross-org reads and writes (verified by test cases), Supabase Auth
-replaces localStorage auth, a manager can create an org and invite interns
-via code, and all existing features (editor, calendar, leave tracker, profiles)
-work unchanged for an authenticated user inside their org.
 
 ---
 

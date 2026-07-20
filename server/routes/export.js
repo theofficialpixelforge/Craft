@@ -1,5 +1,7 @@
+'use strict';
+
 const express = require('express');
-const { getDB } = require('../db/database');
+const { supabaseAdmin } = require('../supabase');
 
 const router = express.Router({ mergeParams: true });
 
@@ -17,9 +19,8 @@ function nodesToMarkdown(nodes) {
   }).join('');
 }
 
-function blockToMarkdown(block, db) {
-  let content;
-  try { content = JSON.parse(block.content); } catch { content = []; }
+function blockToMarkdown(block, linkedDocMap) {
+  const content = Array.isArray(block.content) ? block.content : [];
   const text = nodesToMarkdown(content);
   const indent = '  '.repeat(block.indent || 0);
 
@@ -36,9 +37,9 @@ function blockToMarkdown(block, db) {
     case 'callout': return `> ${block.callout_icon || 'ℹ️'} ${text}`;
     case 'image': return `![${block.image_caption || ''}](${block.image_url || ''})`;
     case 'table': {
-      const td = (() => { try { return block.table_data ? JSON.parse(block.table_data) : null; } catch { return null; } })();
-      if (!td || !td.rows || !td.rows.length) return '';
-      const rows = td.rows;
+      const td = block.table_data;
+      if (!td || !td.rows?.length) return '';
+      const { rows } = td;
       const colCount = rows[0].length;
       const lines = [];
       rows.forEach((row, ri) => {
@@ -49,13 +50,13 @@ function blockToMarkdown(block, db) {
     }
     case 'columns2':
     case 'columns3': {
-      const cols = (() => { try { return block.columns_data ? JSON.parse(block.columns_data) : null; } catch { return null; } })();
+      const cols = block.columns_data;
       if (!Array.isArray(cols)) return '';
       return cols.map(c => nodesToMarkdown(Array.isArray(c) ? c : [])).filter(Boolean).join(' | ');
     }
     case 'page': {
       if (block.linked_doc_id) {
-        const linked = db.prepare(`SELECT title, emoji FROM documents WHERE id = ? AND is_deleted = 0`).get(block.linked_doc_id);
+        const linked = linkedDocMap[block.linked_doc_id];
         if (linked) return `📄 [${linked.emoji ? linked.emoji + ' ' : ''}${linked.title}]`;
       }
       return '';
@@ -65,16 +66,45 @@ function blockToMarkdown(block, db) {
 }
 
 // GET /api/documents/:id/export
-router.get('/', (req, res) => {
-  const db = getDB();
-  const doc = db.prepare(`SELECT * FROM documents WHERE id = ? AND is_deleted = 0`).get(req.params.id);
-  if (!doc) return res.status(404).json({ error: 'Not found' });
+router.get('/', async (req, res) => {
+  const [docResult, blocksResult] = await Promise.all([
+    supabaseAdmin
+      .from('documents')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('org_id', req.auth.orgId)
+      .eq('is_deleted', false)
+      .single(),
+    supabaseAdmin
+      .from('blocks')
+      .select('*')
+      .eq('document_id', req.params.id)
+      .eq('org_id', req.auth.orgId)
+      .order('position'),
+  ]);
 
-  const blocks = db.prepare(`SELECT * FROM blocks WHERE document_id = ? ORDER BY position`).all(req.params.id);
+  if (docResult.error || !docResult.data) return res.status(404).json({ error: 'Not found' });
+  const doc = docResult.data;
+  const blocks = blocksResult.data || [];
+
+  // Pre-fetch linked docs for 'page' blocks
+  const linkedDocIds = blocks
+    .filter(b => b.type === 'page' && b.linked_doc_id)
+    .map(b => b.linked_doc_id);
+
+  const linkedDocMap = {};
+  if (linkedDocIds.length > 0) {
+    const { data: linkedDocs } = await supabaseAdmin
+      .from('documents')
+      .select('id, title, emoji')
+      .in('id', linkedDocIds)
+      .eq('org_id', req.auth.orgId);
+    for (const d of linkedDocs || []) linkedDocMap[d.id] = d;
+  }
 
   const lines = [`# ${doc.title}`, ''];
   for (const block of blocks) {
-    const md = blockToMarkdown(block, db);
+    const md = blockToMarkdown(block, linkedDocMap);
     if (md !== undefined) lines.push(md);
   }
 
