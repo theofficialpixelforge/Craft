@@ -16,7 +16,25 @@ const { supabaseAdmin } = require('./supabase');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
+app.use(cors({
+  origin: (origin, cb) => {
+    const allowed = [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://theofficialcraft.netlify.app',
+    ];
+    // Allow Netlify deploy-preview URLs: https://*--theofficialcraft.netlify.app
+    const isNetlifyPreview = origin && /^https:\/\/[a-z0-9-]+--theofficialcraft\.netlify\.app$/.test(origin);
+    if (!origin || allowed.includes(origin) || isNetlifyPreview) {
+      cb(null, true);
+    } else {
+      cb(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Public — no auth required
