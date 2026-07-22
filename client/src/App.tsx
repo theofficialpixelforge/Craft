@@ -7,6 +7,7 @@ import { CreateOrgPage } from './components/auth/CreateOrgPage';
 import { InviteStubPage } from './components/auth/InviteStubPage';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
+import { BASE } from './api';
 
 type Screen = 'loading' | 'signin' | 'signup' | 'create-org' | 'invite-stub' | 'app';
 
@@ -17,7 +18,7 @@ export default function App() {
   async function loadProfile(s: Session) {
     setLoading(true);
     try {
-      const res = await fetch('/api/me', {
+      const res = await fetch(`${BASE}/me`, {
         headers: { Authorization: `Bearer ${s.access_token}` },
       });
       if (!res.ok) throw new Error('Profile load failed');

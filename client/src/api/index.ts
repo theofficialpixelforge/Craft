@@ -1,7 +1,7 @@
 import type { Block, BlockType, Document, InlineNode, SearchResult } from '../types';
 import { useAuthStore } from '../store/authStore';
 
-const BASE = '/api';
+export const BASE = `${import.meta.env.VITE_API_URL ?? 'http://localhost:3001'}/api`;
 
 function getAuthHeaders(): Record<string, string> {
   const token = useAuthStore.getState().session?.access_token;

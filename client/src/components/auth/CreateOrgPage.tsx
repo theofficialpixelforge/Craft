@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthCard, MoLogo } from './AuthCard';
 import { useAuthStore } from '../../store/authStore';
+import { BASE } from '../../api';
 
 interface Props {
   onSuccess: () => void;
@@ -18,7 +19,7 @@ export function CreateOrgPage({ onSuccess }: Props) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/organizations', {
+      const res = await fetch(`${BASE}/organizations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
